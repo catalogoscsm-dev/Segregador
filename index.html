@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Splitter — Separador de Páginas</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #07070e;
+            --bg-2: #0d0d1a;
+            --bg-card: #111120;
+            --bg-card-h: #171730;
+            --a1: #7c3aed;
+            --a2: #4f46e5;
+            --a3: #06b6d4;
+            --glow: rgba(124, 58, 237, 0.25);
+            --glow2: rgba(6, 182, 212, 0.15);
+            --text: #f1f5f9;
+            --text-2: #94a3b8;
+            --text-3: #475569;
+            --border: rgba(255,255,255,0.07);
+            --border-a: rgba(124,58,237,0.45);
+            --sel-bg: rgba(124,58,237,0.12);
+            --sel-border: rgba(124,58,237,0.65);
+            --radius: 14px;
+            --radius-sm: 9px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ─── Background Ambience ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%);
+            top: -150px; left: -150px;
+            pointer-events: none;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%);
+            bottom: -100px; right: -100px;
+            pointer-events: none;
+        }
+
+        /* ══════════════════════════════════
+           UPLOAD SCREEN
+        ══════════════════════════════════ */
+        #upload-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .brand-icon {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, var(--a1), var(--a2));
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 30px var(--glow);
+        }
+
+        .brand-icon svg { width: 22px; height: 22px; }
+
+        .brand-name {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #c4b5fd 0%, #818cf8 50%, #67e8f9 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-tagline {
+            color: var(--text-3);
+            font-size: 0.95rem;
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .drop-zone {
+            width: 100%;
+            max-width: 560px;
+            border: 1.5px dashed var(--border-a);
+            border-radius: 24px;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--bg-2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(circle at 50% 40%, rgba(124,58,237,0.1), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .drop-zone:hover::before,
+        .drop-zone.drag-over::before { opacity: 1; }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            border-color: var(--a1);
+            transform: scale(1.008);
+            box-shadow: 0 0 50px rgba(124,58,237,0.12), 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .drop-zone.drag-over { border-style: solid; }
+
+        .dz-icon-wrap {
+            width: 90px; height: 90px;
+            margin: 0 auto 1.5rem;
+            position: relative;
+        }
+
+        .dz-icon-bg {
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--a1), var(--a2));
+            border-radius: 22px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 50px var(--glow), 0 8px 30px rgba(0,0,0,0.4);
+            transition: transform 0.3s ease;
+        }
+
+        .drop-zone:hover .dz-icon-bg { transform: translateY(-3px) scale(1.04); }
+
+        .dz-icon-bg svg { width: 42px; height: 42px; }
+
+        .dz-badge {
+            position: absolute;
+            bottom: -4px; right: -4px;
+            width: 26px; height: 26px;
+            background: linear-gradient(135deg, var(--a3), #0284c7);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 15px var(--glow2);
+            border: 2px solid var(--bg);
+        }
+
+        .dz-badge svg { width: 12px; height: 12px; }
+
+        .dz-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.4rem;
+        }
+
+        .dz-sub {
+            color: var(--text-3);
+            font-size: 0.88rem;
+        }
+
+        .dz-link {
+            color: var(--a1);
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .dz-link:hover { color: #a78bfa; }
+
+        .dz-formats {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .dz-format-tag {
+            padding: 0.25rem 0.7rem;
+            border-radius: 99px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            font-size: 0.75rem;
+            color: var(--text-3);
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        #file-input { display: none; }
+
+        /* ══════════════════════════════════
+           APP SCREEN
+        ══════════════════════════════════ */
+        #app-screen {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* ─── Header ─── */
+        .app-header {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(7,7,14,0.88);
+            backdrop-filter: blur(24px);
+            border-bottom: 1px solid var(--border);
+            padding: 0.875rem 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .header-brand {
+            display: flex; align-items: center; gap: 0.6rem;
+            flex-shrink: 0;
+        }
+
+        .header-brand-icon {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--a1), var(--a2));
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .header-brand-icon svg { width: 16px; height: 16px; }
+
+        .header-brand-name {
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #c4b5fd, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .h-divider {
+            width: 1px; height: 28px;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+
+        .header-file {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .hf-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .hf-meta {
+            font-size: 0.75rem;
+            color: var(--text-3);
+            margin-top: 1px;
+        }
+
+        .btn-ghost {
+            padding: 0.45rem 1.1rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-2);
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .btn-ghost:hover {
+            border-color: rgba(255,255,255,0.15);
+            color: var(--text);
+            background: rgba(255,255,255,0.04);
+        }
+
+        /* ─── Controls Bar ─── */
+        .controls-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1.75rem;
+            background: rgba(13,13,26,0.6);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            position: sticky; top: 57px; z-index: 99;
+            backdrop-filter: blur(16px);
+        }
+
+        .sel-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.9rem;
+            border-radius: 99px;
+            background: rgba(124,58,237,0.1);
+            border: 1px solid rgba(124,58,237,0.2);
+            font-size: 0.82rem;
+            color: #c4b5fd;
+            font-weight: 600;
+            min-width: 160px;
+            transition: all 0.3s;
+        }
+
+        .sel-badge-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--a1);
+            flex-shrink: 0;
+        }
+
+        .ctrl-btns {
+            display: flex;
+            gap: 0.4rem;
+            flex: 1;
+            flex-wrap: wrap;
+        }
+
+        .btn-ctrl {
+            padding: 0.38rem 0.9rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-3);
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-ctrl:hover {
+            border-color: rgba(255,255,255,0.12);
+            color: var(--text-2);
+            background: rgba(255,255,255,0.04);
+        }
+
+        .ctrl-hint {
+            font-size: 0.75rem;
+            color: var(--text-3);
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .ctrl-hint kbd {
+            display: inline-block;
+            padding: 0.1rem 0.35rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.7rem;
+            background: rgba(255,255,255,0.04);
+        }
+
+        /* ─── Pages Grid ─── */
+        .pages-wrap {
+            flex: 1;
+            padding: 1.75rem;
+            padding-bottom: 130px;
+        }
+
+        .pages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        /* ─── Page Card ─── */
+        .page-card {
+            border-radius: var(--radius);
+            border: 1.5px solid var(--border);
+            background: var(--bg-card);
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.22s ease, box-shadow 0.22s ease, background 0.2s;
+            overflow: hidden;
+            opacity: 0;
+            animation: cardIn 0.35s ease forwards;
+            position: relative;
+        }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: scale(0.94) translateY(6px); }
+            to   { opacity: 1; transform: scale(1)   translateY(0); }
+        }
+
+        .page-card:hover {
+            border-color: rgba(255,255,255,0.14);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .page-card.selected {
+            border-color: var(--sel-border);
+            background: var(--sel-bg);
+            box-shadow:
+                0 0 0 1px rgba(124,58,237,0.25),
+                0 10px 40px rgba(0,0,0,0.5),
+                0 0 30px rgba(124,58,237,0.08);
+        }
+
+        .page-card.selected:hover {
+            transform: translateY(-3px);
+        }
+
+        /* Thumbnail area */
+        .card-thumb {
+            width: 100%;
+            display: block;
+            background: #fff;
+        }
+
+        .card-loading {
+            aspect-ratio: 3/4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-card);
+        }
+
+        .spinner-sm {
+            width: 22px; height: 22px;
+            border: 2px solid var(--border);
+            border-top-color: var(--a1);
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Card footer */
+        .card-footer {
+            padding: 0.55rem 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .page-card.selected .card-footer {
+            background: rgba(124,58,237,0.08);
+        }
+
+        .card-num {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-3);
+            letter-spacing: 0.04em;
+            transition: color 0.2s;
+        }
+
+        .page-card.selected .card-num { color: #a78bfa; }
+
+        .card-checkbox {
+            width: 20px; height: 20px;
+            border-radius: 6px;
+            border: 1.5px solid var(--text-3);
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .page-card.selected .card-checkbox {
+            background: linear-gradient(135deg, var(--a1), var(--a2));
+            border-color: transparent;
+            box-shadow: 0 0 12px var(--glow);
+        }
+
+        .card-checkbox svg {
+            width: 11px; height: 11px;
+            stroke: white;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .page-card.selected .card-checkbox svg {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Card hover overlay */
+        .card-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(124,58,237,0.06);
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            border-radius: var(--radius);
+        }
+
+        .page-card:hover .card-overlay { opacity: 1; }
+        .page-card.selected .card-overlay { opacity: 0; }
+
+        /* ─── Bottom Toolbar ─── */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.75rem;
+            background: rgba(7,7,14,0.95);
+            backdrop-filter: blur(24px);
+            border-top: 1px solid var(--border);
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .bottom-bar.visible { transform: translateY(0); }
+
+        .bb-info { flex: 1; }
+
+        .bb-count {
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .bb-hint {
+            font-size: 0.75rem;
+            color: var(--text-3);
+            margin-top: 2px;
+        }
+
+        .bb-actions {
+            display: flex;
+            gap: 0.6rem;
+            align-items: center;
+        }
+
+        .btn-dl {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.4rem;
+            border-radius: 11px;
+            border: none;
+            font-size: 0.87rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            letter-spacing: -0.01em;
+        }
+
+        .btn-dl svg { flex-shrink: 0; }
+
+        .btn-dl-zip {
+            background: var(--bg-card);
+            color: var(--text-2);
+            border: 1px solid var(--border);
+        }
+
+        .btn-dl-zip:hover {
+            border-color: rgba(255,255,255,0.14);
+            color: var(--text);
+            background: var(--bg-card-h);
+            transform: translateY(-1px);
+        }
+
+        .btn-dl-pdf {
+            background: linear-gradient(135deg, var(--a1), var(--a2));
+            color: white;
+            box-shadow: 0 4px 20px var(--glow);
+        }
+
+        .btn-dl-pdf:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 35px rgba(124,58,237,0.45);
+        }
+
+        .btn-dl:active { transform: translateY(0) scale(0.98); }
+
+        /* ── Loading Overlay ── */
+        #loading-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(7,7,14,0.8);
+            backdrop-filter: blur(16px);
+            z-index: 200;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.25rem;
+        }
+
+        #loading-overlay.show { display: flex; }
+
+        .loader-ring {
+            width: 52px; height: 52px;
+            border: 3px solid rgba(255,255,255,0.06);
+            border-top-color: var(--a1);
+            border-right-color: var(--a3);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        .loader-text {
+            font-size: 0.9rem;
+            color: var(--text-2);
+            font-weight: 500;
+        }
+
+        .loader-bar-wrap {
+            width: 200px; height: 3px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .loader-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--a1), var(--a3));
+            border-radius: 99px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 90px; left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: var(--bg-card-h);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 0.65rem 1.4rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: var(--text);
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 300;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 640px) {
+            .pages-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+            .ctrl-hint { display: none; }
+            .bb-actions { flex-wrap: wrap; }
+            .pages-wrap { padding: 1rem; padding-bottom: 150px; }
+            .controls-bar { top: 53px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════ UPLOAD SCREEN ══════════════ -->
+<div id="upload-screen">
+    <div class="brand">
+        <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="rgba(255,255,255,0.9)"/>
+                <path d="M14 2v6h6" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <span class="brand-name">PDF Splitter</span>
+    </div>
+    <p class="brand-tagline">Separe, selecione e baixe páginas do seu PDF instantaneamente</p>
+
+    <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept=".pdf">
+        <div class="dz-icon-wrap">
+            <div class="dz-icon-bg">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M28 6H12a4 4 0 0 0-4 4v28a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4V18L28 6z" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.8)" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M28 6v12h12" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M24 22v12M19 27l5-5 5 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="dz-badge">
+                <svg viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6h8M6 2v8" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </div>
+        </div>
+        <p class="dz-title">Arraste seu PDF aqui</p>
+        <p class="dz-sub">ou <span class="dz-link" id="browse-link">clique para selecionar</span></p>
+        <div class="dz-formats">
+            <span class="dz-format-tag">PDF</span>
+            <span class="dz-format-tag">Até qualquer tamanho</span>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════ APP SCREEN ══════════════ -->
+<div id="app-screen">
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="header-brand-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="rgba(255,255,255,0.9)"/>
+                    <path d="M14 2v6h6" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <span class="header-brand-name">PDF Splitter</span>
+        </div>
+        <div class="h-divider"></div>
+        <div class="header-file">
+            <div class="hf-name" id="hf-name">—</div>
+            <div class="hf-meta" id="hf-meta">—</div>
+        </div>
+        <button class="btn-ghost" id="btn-new">+ Novo arquivo</button>
+    </header>
+
+    <div class="controls-bar">
+        <div class="sel-badge" id="sel-badge">
+            <div class="sel-badge-dot"></div>
+            <span id="sel-text">0 selecionadas</span>
+        </div>
+        <div class="ctrl-btns">
+            <button class="btn-ctrl" id="btn-all">Todas</button>
+            <button class="btn-ctrl" id="btn-none">Limpar</button>
+            <button class="btn-ctrl" id="btn-invert">Inverter</button>
+            <button class="btn-ctrl" id="btn-odd">Ímpares</button>
+            <button class="btn-ctrl" id="btn-even">Pares</button>
+        </div>
+        <span class="ctrl-hint"><kbd>Shift</kbd> + clique para intervalo</span>
+    </div>
+
+    <main class="pages-wrap">
+        <div class="pages-grid" id="pages-grid"></div>
+    </main>
+
+    <div class="bottom-bar" id="bottom-bar">
+        <div class="bb-info">
+            <div class="bb-count" id="bb-count">0 páginas</div>
+            <div class="bb-hint">Prontas para download</div>
+        </div>
+        <div class="bb-actions">
+            <button class="btn-dl btn-dl-zip" id="btn-zip">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                ZIP individual
+            </button>
+            <button class="btn-dl btn-dl-pdf" id="btn-pdf">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Baixar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Loading Overlay ── -->
+<div id="loading-overlay">
+    <div class="loader-ring"></div>
+    <div class="loader-text" id="loader-text">Carregando...</div>
+    <div class="loader-bar-wrap">
+        <div class="loader-bar" id="loader-bar"></div>
+    </div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+// Fetch full worker JS and create a local blob — only approach that works reliably on file://
+const _WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+async function initWorker() {
+    try {
+        const res  = await fetch(_WORKER_CDN);
+        const text = await res.text();
+        const blob = new Blob([text], { type: 'application/javascript' });
+        pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+    } catch (e) {
+        // Fallback: direct CDN (works when served via http://)
+        pdfjsLib.GlobalWorkerOptions.workerSrc = _WORKER_CDN;
+        console.warn('Worker blob fallback failed, using CDN URL directly:', e);
+    }
+}
+const workerReady = initWorker();
+
+// ── State ──
+let pdfJsDoc = null;
+let pdfLibDoc = null;
+let pdfBytes  = null;
+let totalPages = 0;
+let fileName   = '';
+let selected   = new Set();
+let lastIdx    = null;
+
+// ── DOM ──
+const uploadScreen = document.getElementById('upload-screen');
+const appScreen    = document.getElementById('app-screen');
+const dropZone     = document.getElementById('drop-zone');
+const fileInput    = document.getElementById('file-input');
+const pagesGrid    = document.getElementById('pages-grid');
+const bottomBar    = document.getElementById('bottom-bar');
+const selText      = document.getElementById('sel-text');
+const bbCount      = document.getElementById('bb-count');
+const hfName       = document.getElementById('hf-name');
+const hfMeta       = document.getElementById('hf-meta');
+const loadingOv    = document.getElementById('loading-overlay');
+const loaderText   = document.getElementById('loader-text');
+const loaderBar    = document.getElementById('loader-bar');
+const toastEl      = document.getElementById('toast');
+
+// ── Upload ──
+document.getElementById('browse-link').addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+});
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+['dragleave','dragend'].forEach(ev => dropZone.addEventListener(ev, () => dropZone.classList.remove('drag-over')));
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f?.type === 'application/pdf') handleFile(f);
+    else toast('Por favor, selecione um arquivo PDF válido.');
+});
+
+// ── Controls ──
+document.getElementById('btn-new').addEventListener('click', resetApp);
+document.getElementById('btn-all').addEventListener('click', () => { for (let i=1;i<=totalPages;i++) selected.add(i); syncCards(); syncSelection(); });
+document.getElementById('btn-none').addEventListener('click', () => { selected.clear(); syncCards(); syncSelection(); });
+document.getElementById('btn-invert').addEventListener('click', () => { for (let i=1;i<=totalPages;i++) selected.has(i)?selected.delete(i):selected.add(i); syncCards(); syncSelection(); });
+document.getElementById('btn-odd').addEventListener('click', () => { selected.clear(); for (let i=1;i<=totalPages;i+=2) selected.add(i); syncCards(); syncSelection(); });
+document.getElementById('btn-even').addEventListener('click', () => { selected.clear(); for (let i=2;i<=totalPages;i+=2) selected.add(i); syncCards(); syncSelection(); });
+
+document.getElementById('btn-pdf').addEventListener('click', downloadPDF);
+document.getElementById('btn-zip').addEventListener('click', downloadZIP);
+
+// ── File Loading ──
+async function handleFile(file) {
+    showLoader('Carregando PDF...', 5);
+    try {
+        await workerReady; // ensure worker blob is ready before parsing
+        fileName  = file.name.replace(/\.pdf$/i, '');
+        pdfBytes  = await file.arrayBuffer();
+        showLoader('Analisando estrutura...', 30);
+
+        // slice(0) creates a real copy — PDF.js detaches that copy via postMessage,
+        // leaving the original pdfBytes intact for pdf-lib to use later
+        pdfJsDoc  = await pdfjsLib.getDocument({ data: pdfBytes.slice(0) }).promise;
+        totalPages = pdfJsDoc.numPages;
+        showLoader('Preparando visualização...', 55);
+
+        pdfLibDoc = await PDFLib.PDFDocument.load(pdfBytes);
+        showLoader('Renderizando miniaturas...', 70);
+
+        hfName.textContent = file.name;
+        hfMeta.textContent = `${totalPages} página${totalPages!==1?'s':''} · ${fmtBytes(file.size)}`;
+
+        selected.clear();
+        lastIdx = null;
+        pagesGrid.innerHTML = '';
+        selected.clear();
+        syncSelection();
+
+        uploadScreen.style.display = 'none';
+        appScreen.style.display = 'flex';
+        appScreen.style.flexDirection = 'column';
+
+        hideLoader();
+        renderPages();
+    } catch (err) {
+        hideLoader();
+        const msg = err?.message || String(err);
+        toast('Erro: ' + (msg.length < 80 ? msg : 'Falha ao processar o PDF. Veja o console (F12).'));
+        console.error('[PDF Splitter] Erro ao processar:', err);
+    }
+}
+
+async function renderPages() {
+    // Create placeholders
+    for (let i = 1; i <= totalPages; i++) {
+        const card = makeCard(i);
+        card.style.animationDelay = `${Math.min((i-1) * 0.04, 0.6)}s`;
+        pagesGrid.appendChild(card);
+    }
+    // Render thumbnails in batches
+    const BATCH = 5;
+    for (let i = 1; i <= totalPages; i += BATCH) {
+        const jobs = [];
+        for (let j = i; j < Math.min(i+BATCH, totalPages+1); j++) jobs.push(renderThumb(j));
+        await Promise.all(jobs);
+    }
+}
+
+function makeCard(n) {
+    const card = document.createElement('div');
+    card.className = 'page-card';
+    card.dataset.page = n;
+    card.innerHTML = `
+        <div class="card-loading"><div class="spinner-sm"></div></div>
+        <div class="card-footer">
+            <span class="card-num">PÁG ${n}</span>
+            <div class="card-checkbox">
+                <svg viewBox="0 0 11 11"><polyline points="1.5,5.5 4,8.5 9.5,2.5"/></svg>
+            </div>
+        </div>
+        <div class="card-overlay"></div>`;
+    card.addEventListener('click', (e) => onCardClick(e, n));
+    return card;
+}
+
+async function renderThumb(n) {
+    try {
+        const page = await pdfJsDoc.getPage(n);
+        const vp   = page.getViewport({ scale: 1 });
+        const W    = 200;
+        const scale = W / vp.width;
+        const svp  = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width  = svp.width;
+        canvas.height = svp.height;
+        canvas.className = 'card-thumb';
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: svp, background: 'white' }).promise;
+
+        const card = pagesGrid.querySelector(`[data-page="${n}"]`);
+        if (card) {
+            const loading = card.querySelector('.card-loading');
+            const footer  = card.querySelector('.card-footer');
+            if (loading) loading.remove();
+            card.insertBefore(canvas, footer);
+        }
+    } catch (err) { console.error(`Page ${n}:`, err); }
+}
+
+// ── Card Interaction ──
+function onCardClick(e, n) {
+    if (e.shiftKey && lastIdx !== null) {
+        const a = Math.min(lastIdx, n), b = Math.max(lastIdx, n);
+        for (let i=a; i<=b; i++) selected.add(i);
+        syncCards();
+    } else {
+        selected.has(n) ? selected.delete(n) : selected.add(n);
+        syncCard(n);
+    }
+    lastIdx = n;
+    syncSelection();
+}
+
+function syncCard(n) {
+    const c = pagesGrid.querySelector(`[data-page="${n}"]`);
+    if (c) c.classList.toggle('selected', selected.has(n));
+}
+
+function syncCards() {
+    for (let i=1; i<=totalPages; i++) syncCard(i);
+}
+
+function syncSelection() {
+    const count = selected.size;
+    selText.textContent = `${count} de ${totalPages} selecionadas`;
+    bbCount.textContent = `${count} página${count!==1?'s':''} selecionada${count!==1?'s':''}`;
+    bottomBar.classList.toggle('visible', count > 0);
+}
+
+// ── Downloads ──
+async function downloadPDF() {
+    if (!selected.size) return;
+    showLoader('Gerando PDF...', 20);
+    try {
+        const out  = await PDFLib.PDFDocument.create();
+        const idxs = [...selected].sort((a,b)=>a-b).map(p=>p-1);
+        const pages = await out.copyPages(pdfLibDoc, idxs);
+        pages.forEach(p => out.addPage(p));
+        setProgress(75);
+        const bytes = await out.save();
+        setProgress(95);
+        dlBlob(new Blob([bytes], {type:'application/pdf'}), `${fileName}_selecionadas.pdf`);
+        hideLoader();
+        toast(`✓ PDF com ${selected.size} página(s) baixado!`);
+    } catch (err) {
+        hideLoader();
+        toast('Erro ao gerar o PDF.');
+        console.error(err);
+    }
+}
+
+async function downloadZIP() {
+    if (!selected.size) return;
+    const zip  = new JSZip();
+    const pages = [...selected].sort((a,b)=>a-b);
+    showLoader(`Gerando ${pages.length} arquivos...`, 5);
+    try {
+        for (let i=0; i<pages.length; i++) {
+            const n = pages[i];
+            const doc = await PDFLib.PDFDocument.create();
+            const [pg] = await doc.copyPages(pdfLibDoc, [n-1]);
+            doc.addPage(pg);
+            const bytes = await doc.save();
+            zip.file(`${fileName}_pag_${String(n).padStart(3,'0')}.pdf`, bytes);
+            setProgress(5 + ((i+1)/pages.length)*85);
+            loaderText.textContent = `Página ${i+1} de ${pages.length}...`;
+        }
+        setProgress(95);
+        loaderText.textContent = 'Comprimindo...';
+        const blob = await zip.generateAsync({type:'blob'});
+        dlBlob(blob, `${fileName}_páginas.zip`);
+        hideLoader();
+        toast(`✓ ZIP com ${pages.length} PDF(s) baixado!`);
+    } catch (err) {
+        hideLoader();
+        toast('Erro ao gerar o ZIP.');
+        console.error(err);
+    }
+}
+
+function dlBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ── Loader ──
+function showLoader(text, pct) {
+    loaderText.textContent = text;
+    loaderBar.style.width  = (pct||0) + '%';
+    loadingOv.classList.add('show');
+}
+function setProgress(pct) { loaderBar.style.width = pct + '%'; }
+function hideLoader() {
+    setProgress(100);
+    setTimeout(() => loadingOv.classList.remove('show'), 400);
+}
+
+// ── Toast ──
+let toastTimer;
+function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3200);
+}
+
+// ── Reset ──
+function resetApp() {
+    appScreen.style.display = 'none';
+    uploadScreen.style.display = 'flex';
+    pagesGrid.innerHTML = '';
+    selected.clear();
+    pdfJsDoc = pdfLibDoc = pdfBytes = null;
+    lastIdx = null;
+    fileInput.value = '';
+    bottomBar.classList.remove('visible');
+}
+
+// ── Helpers ──
+function fmtBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+    return (b/1048576).toFixed(1) + ' MB';
+}
+</script>
+</body>
+</html>
