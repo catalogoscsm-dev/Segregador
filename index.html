@@ -353,6 +353,24 @@
         .page-card:hover .card-dl-btn { opacity: 1; transform: scale(1); }
         .card-dl-btn:hover { background: var(--a1) !important; transform: scale(1.1) !important; box-shadow: 0 0 14px var(--glow); }
 
+        /* Expand/zoom button */
+        .card-expand-btn {
+            position: absolute; top: 7px; left: 7px;
+            width: 30px; height: 30px;
+            border-radius: 9px; border: none;
+            background: rgba(7,7,14,0.75);
+            backdrop-filter: blur(8px);
+            color: white; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transform: scale(0.8);
+            transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+        }
+        .card-expand-btn svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
+        .page-card:hover .card-expand-btn { opacity: 1; transform: scale(1); }
+        .card-expand-btn:hover { background: var(--a3) !important; transform: scale(1.1) !important; box-shadow: 0 0 14px var(--glow2); }
+
         /* Card footer */
         .card-footer {
             padding: 0.5rem 0.7rem;
@@ -467,6 +485,99 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.6);
         }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── Zoom Modal ── */
+        #zoom-modal {
+            display: none; position: fixed; inset: 0; z-index: 600;
+        }
+        #zoom-modal.open { display: flex; align-items: center; justify-content: center; }
+
+        #zoom-backdrop {
+            position: absolute; inset: 0;
+            background: rgba(0,0,0,0.88);
+            backdrop-filter: blur(14px);
+            cursor: zoom-out;
+        }
+
+        #zoom-panel {
+            position: relative; z-index: 1;
+            display: flex; flex-direction: column;
+            width: min(92vw, 1100px);
+            height: min(92vh, 880px);
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04);
+            animation: zmPanelIn 0.22s ease;
+        }
+        @keyframes zmPanelIn {
+            from { opacity: 0; transform: scale(0.94) translateY(8px); }
+            to   { opacity: 1; transform: scale(1)   translateY(0); }
+        }
+
+        #zoom-top {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.65rem 1rem;
+            border-bottom: 1px solid var(--border);
+            background: rgba(13,13,26,0.9);
+            flex-shrink: 0; user-select: none;
+        }
+        #zoom-lbl { flex: 1; font-size: 0.8rem; color: var(--text-2); font-weight: 600; white-space: nowrap; }
+
+        #zoom-ctrl-row { display: flex; align-items: center; gap: 0.3rem; }
+        #zm-pct {
+            font-size: 0.78rem; color: var(--text-3); font-weight: 600;
+            min-width: 42px; text-align: center;
+        }
+
+        .zm-btn {
+            width: 28px; height: 28px; border-radius: 7px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text-2); cursor: pointer; font-size: 1.05rem; line-height: 1;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .zm-btn:hover { border-color: rgba(255,255,255,0.15); color: var(--text); background: rgba(255,255,255,0.06); }
+        .zm-btn svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
+
+        #zm-close {
+            width: 28px; height: 28px; border-radius: 7px;
+            border: 1px solid var(--border); background: transparent; color: var(--text-3);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s; flex-shrink: 0;
+        }
+        #zm-close svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; fill: none; }
+        #zm-close:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
+
+        #zoom-body { flex: 1; display: flex; align-items: stretch; overflow: hidden; min-height: 0; }
+
+        .zm-nav {
+            width: 48px; flex-shrink: 0;
+            border: none; background: transparent;
+            color: var(--text-3); font-size: 2.2rem; cursor: pointer;
+            transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+        }
+        .zm-nav:hover:not(:disabled) { color: var(--text); background: rgba(255,255,255,0.04); }
+        .zm-nav:disabled { opacity: 0.15; cursor: default; }
+
+        #zoom-scroll {
+            flex: 1; overflow: auto; padding: 20px;
+            display: grid; place-items: center;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+        #zoom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+        #zoom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 99px; }
+
+        #zoom-img {
+            display: block;
+            box-shadow: 0 4px 40px rgba(0,0,0,0.8);
+            border-radius: 2px;
+            max-width: none;
+            user-select: none;
+            image-rendering: -webkit-optimize-contrast;
+        }
 
         /* ─ Responsive ─ */
         @media (max-width: 640px) {
@@ -598,6 +709,34 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Zoom Modal -->
+<div id="zoom-modal">
+    <div id="zoom-backdrop"></div>
+    <div id="zoom-panel">
+        <div id="zoom-top">
+            <span id="zoom-lbl">Pág 1 de 1</span>
+            <div id="zoom-ctrl-row">
+                <button class="zm-btn" id="zm-out" title="Diminuir zoom (−)">−</button>
+                <span id="zm-pct">100%</span>
+                <button class="zm-btn" id="zm-in" title="Aumentar zoom (+)">+</button>
+                <button class="zm-btn" id="zm-fit" title="Ajustar à tela (0)">
+                    <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                </button>
+            </div>
+            <button id="zm-close">
+                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div id="zoom-body">
+            <button class="zm-nav" id="zm-prev" title="Página anterior (←)">&#8249;</button>
+            <div id="zoom-scroll">
+                <img id="zoom-img" alt="">
+            </div>
+            <button class="zm-nav" id="zm-next" title="Próxima página (→)">&#8250;</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -609,17 +748,19 @@
 // + selection state per tab so nothing is lost.
 // ══════════════════════════════════════════════════════════════
 const DB_NAME    = 'csm-splitter-v1';
-const DB_VER     = 1;
+const DB_VER     = 2;
 const ST_TABS    = 'tabs';
 const ST_META    = 'meta';
+const ST_THUMBS  = 'thumbs';
 
 function openDB() {
     return new Promise((res, rej) => {
         const req = indexedDB.open(DB_NAME, DB_VER);
         req.onupgradeneeded = e => {
             const db = e.target.result;
-            if (!db.objectStoreNames.contains(ST_TABS)) db.createObjectStore(ST_TABS, { keyPath: 'id' });
-            if (!db.objectStoreNames.contains(ST_META)) db.createObjectStore(ST_META);
+            if (!db.objectStoreNames.contains(ST_TABS))   db.createObjectStore(ST_TABS,   { keyPath: 'id' });
+            if (!db.objectStoreNames.contains(ST_META))   db.createObjectStore(ST_META);
+            if (!db.objectStoreNames.contains(ST_THUMBS)) db.createObjectStore(ST_THUMBS);
         };
         req.onsuccess = e => res(e.target.result);
         req.onerror   = e => rej(e.target.error);
@@ -652,6 +793,42 @@ async function dbDeleteTab(id) {
         tx.oncomplete = res;
         tx.onerror    = e => rej(e.target.error);
     });
+}
+
+async function dbSaveThumbs(tabId, thumbs) {
+    try {
+        const db = await openDB();
+        await new Promise((res, rej) => {
+            const tx = db.transaction(ST_THUMBS, 'readwrite');
+            tx.objectStore(ST_THUMBS).put(thumbs, tabId);
+            tx.oncomplete = res;
+            tx.onerror    = e => rej(e.target.error);
+        });
+    } catch {}
+}
+
+async function dbLoadThumbs(tabId) {
+    try {
+        const db = await openDB();
+        return await new Promise((res, rej) => {
+            const tx  = db.transaction(ST_THUMBS, 'readonly');
+            const req = tx.objectStore(ST_THUMBS).get(tabId);
+            req.onsuccess = e => res(e.target.result || {});
+            req.onerror   = e => rej(e.target.error);
+        });
+    } catch { return {}; }
+}
+
+async function dbDeleteThumbs(tabId) {
+    try {
+        const db = await openDB();
+        await new Promise((res, rej) => {
+            const tx = db.transaction(ST_THUMBS, 'readwrite');
+            tx.objectStore(ST_THUMBS).delete(tabId);
+            tx.oncomplete = res;
+            tx.onerror    = e => rej(e.target.error);
+        });
+    } catch {}
 }
 
 async function dbSaveMeta(key, val) {
@@ -717,10 +894,12 @@ async function restoreState() {
         try {
             setProgress(5 + ((i / saved.length) * 85));
             loaderText.textContent = `Restaurando "${s.fileName}"…`;
-            const pdfJsDoc  = await pdfjsLib.getDocument({ data: s.pdfBytes.slice(0) }).promise;
-            const pdfLibDoc = await PDFLib.PDFDocument.load(s.pdfBytes);
-            // localStorage is the source of truth for selection (sync write, never missed by F5)
-            // fall back to IndexedDB value if localStorage entry doesn't exist
+            // PDF.js, pdf-lib e thumbs carregam em paralelo — eram sequenciais antes
+            const [pdfJsDoc, pdfLibDoc, cachedThumbs] = await Promise.all([
+                pdfjsLib.getDocument({ data: s.pdfBytes.slice(0) }).promise,
+                PDFLib.PDFDocument.load(s.pdfBytes),
+                dbLoadThumbs(s.id)
+            ]);
             const lsSel = lsLoadSelection(s.id);
             tabs.push({
                 id:         s.id,
@@ -733,7 +912,7 @@ async function restoreState() {
                 totalPages: pdfJsDoc.numPages,
                 selected:   new Set(lsSel ?? s.selected),
                 lastIdx:    s.lastIdx,
-                thumbs:     {}
+                thumbs:     cachedThumbs   // já prontas do IndexedDB — sem re-render
             });
         } catch (e) {
             console.warn('[CSM Splitter] Falha ao restaurar aba:', s.fileName, e);
@@ -901,6 +1080,7 @@ function closeTab(id) {
     if (idx === -1) return;
     tabs.splice(idx, 1);
     dbDeleteTab(id);       // remove PDF bytes from IndexedDB
+    dbDeleteThumbs(id);    // remove thumbnails from IndexedDB
     lsDeleteSelection(id); // remove selection from localStorage
 
     if (tabs.length === 0) {
@@ -963,6 +1143,10 @@ function makeCard(tab, n) {
         ${tab.thumbs[n]
             ? `<img class="card-thumb" src="${tab.thumbs[n]}" alt="Página ${n}">`
             : `<div class="card-loading"><div class="spinner-sm"></div></div>`}
+        <button class="card-expand-btn" title="Expandir página ${n}">
+            <svg viewBox="0 0 24 24"><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            <polyline points="9,21 3,21 3,15"/><line x1="14" y1="10" x2="3" y2="21"/></svg>
+        </button>
         <button class="card-dl-btn" title="Baixar página ${n}">
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -976,12 +1160,20 @@ function makeCard(tab, n) {
         <div class="card-overlay"></div>`;
 
     card.addEventListener('click', e => {
-        if (e.target.closest('.card-dl-btn')) return;
+        if (e.target.closest('.card-dl-btn') || e.target.closest('.card-expand-btn')) return;
         onCardClick(e, tab, n);
+    });
+    card.querySelector('.card-expand-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        openZoom(tab, n);
     });
     card.querySelector('.card-dl-btn').addEventListener('click', e => {
         e.stopPropagation();
         downloadSinglePage(tab, n);
+    });
+    card.addEventListener('dblclick', e => {
+        if (e.target.closest('.card-dl-btn') || e.target.closest('.card-expand-btn')) return;
+        openZoom(tab, n);
     });
 
     return card;
@@ -995,6 +1187,7 @@ async function renderThumbs(tab) {
             if (!tab.thumbs[j]) jobs.push(renderOneThumb(tab, j));
         }
         await Promise.all(jobs);
+        dbSaveThumbs(tab.id, tab.thumbs); // salva incrementalmente — não precisa esperar
     }
 }
 
@@ -1130,6 +1323,142 @@ function toast(msg) {
     toastEl.textContent = msg; toastEl.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3000);
+}
+
+// ── Zoom Modal ──
+const zoomModal  = document.getElementById('zoom-modal');
+const zoomImgEl  = document.getElementById('zoom-img');
+const zoomLblEl  = document.getElementById('zoom-lbl');
+const zmPctEl    = document.getElementById('zm-pct');
+const zoomScroll = document.getElementById('zoom-scroll');
+const zmPrevBtn  = document.getElementById('zm-prev');
+const zmNextBtn  = document.getElementById('zm-next');
+
+let zm = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1, busy: false };
+
+document.getElementById('zoom-backdrop').addEventListener('click', closeZoom);
+document.getElementById('zm-close').addEventListener('click', closeZoom);
+document.getElementById('zm-in').addEventListener('click', () => zoomStep(1.25));
+document.getElementById('zm-out').addEventListener('click', () => zoomStep(1 / 1.25));
+document.getElementById('zm-fit').addEventListener('click', zoomFit);
+zmPrevBtn.addEventListener('click', () => zmNavPage(-1));
+zmNextBtn.addEventListener('click', () => zmNavPage(1));
+
+zoomScroll.addEventListener('wheel', e => {
+    e.preventDefault();
+    zoomStep(e.deltaY < 0 ? 1.15 : (1 / 1.15));
+}, { passive: false });
+
+document.addEventListener('keydown', e => {
+    if (!zoomModal.classList.contains('open')) return;
+    if (e.key === 'Escape')                              closeZoom();
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  zmNavPage(-1);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') zmNavPage(1);
+    if (e.key === '+' || e.key === '=')                  zoomStep(1.25);
+    if (e.key === '-')                                   zoomStep(1 / 1.25);
+    if (e.key === '0')                                   zoomFit();
+});
+
+async function openZoom(tab, n) {
+    zm.tab  = tab;
+    zm.page = n;
+    zm.busy = false;
+    zoomModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Show low-res thumbnail immediately so the modal isn't empty
+    if (tab.thumbs[n]) {
+        zoomImgEl.src = tab.thumbs[n];
+        await new Promise(r => {
+            if (zoomImgEl.complete) r();
+            else { zoomImgEl.onload = r; zoomImgEl.onerror = r; }
+        });
+        zm.naturalW = zoomImgEl.naturalWidth  || 200;
+        zm.naturalH = zoomImgEl.naturalHeight || 280;
+        zm.zoom = 0.34;
+        applyZoom();
+    }
+
+    zmPrevBtn.disabled = n <= 1;
+    zmNextBtn.disabled = n >= tab.totalPages;
+    zmUpdateLabel();
+
+    // Render HD in background
+    loadZoomHD(tab, n);
+}
+
+function closeZoom() {
+    zoomModal.classList.remove('open');
+    document.body.style.overflow = '';
+    zm.tab = null;
+}
+
+async function loadZoomHD(tab, n) {
+    if (!tab.thumbsHD) tab.thumbsHD = {};
+    if (tab.thumbsHD[n]) {
+        zmSwapHD(tab, n);
+        return;
+    }
+    try {
+        const page  = await tab.pdfJsDoc.getPage(n);
+        const vp    = page.getViewport({ scale: 1 });
+        const scale = Math.min(3.5, 1800 / vp.width);
+        const rvp   = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = rvp.width; canvas.height = rvp.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: rvp, background: 'white' }).promise;
+        tab.thumbsHD[n] = { src: canvas.toDataURL('image/jpeg', 0.92), w: rvp.width, h: rvp.height };
+    } catch { return; }
+    zmSwapHD(tab, n);
+}
+
+function zmSwapHD(tab, n) {
+    if (!zm.tab || zm.tab.id !== tab.id || zm.page !== n) return;
+    const hd = tab.thumbsHD[n];
+    // Compute the current visual size and maintain it when swapping to HD
+    const displayW = zm.naturalW * zm.zoom;
+    zm.naturalW = hd.w;
+    zm.naturalH = hd.h;
+    zm.zoom = displayW / hd.w;
+    zoomImgEl.src = hd.src;
+    applyZoom();
+}
+
+function zoomFit() {
+    const aw = zoomScroll.clientWidth  - 40;
+    const ah = zoomScroll.clientHeight - 40;
+    zm.zoom = Math.min(aw / zm.naturalW, ah / zm.naturalH, 1);
+    applyZoom();
+}
+
+function zoomStep(factor) {
+    zm.zoom = Math.min(8, Math.max(0.08, zm.zoom * factor));
+    applyZoom();
+}
+
+function applyZoom() {
+    const w = Math.round(zm.naturalW * zm.zoom);
+    const h = Math.round(zm.naturalH * zm.zoom);
+    zoomImgEl.style.width  = w + 'px';
+    zoomImgEl.style.height = h + 'px';
+    zmUpdateLabel();
+}
+
+function zmNavPage(delta) {
+    if (!zm.tab) return;
+    const next = zm.page + delta;
+    if (next < 1 || next > zm.tab.totalPages) return;
+    zm.page = next;
+    zmPrevBtn.disabled = next <= 1;
+    zmNextBtn.disabled = next >= zm.tab.totalPages;
+    zmUpdateLabel();
+    openZoom(zm.tab, next);
+}
+
+function zmUpdateLabel() {
+    if (!zm.tab) return;
+    zoomLblEl.textContent = `Pág ${zm.page} de ${zm.tab.totalPages}`;
+    zmPctEl.textContent   = Math.round(zm.zoom * 100) + '%';
 }
 
 // ── Init: restore previous session ──
