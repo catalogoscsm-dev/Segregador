@@ -371,6 +371,24 @@
         .page-card:hover .card-expand-btn { opacity: 1; transform: scale(1); }
         .card-expand-btn:hover { background: var(--a3) !important; transform: scale(1.1) !important; box-shadow: 0 0 14px var(--glow2); }
 
+        /* Scissors/crop button on card */
+        .card-crop-btn {
+            position: absolute; top: 44px; left: 7px;
+            width: 30px; height: 30px;
+            border-radius: 9px; border: none;
+            background: rgba(7,7,14,0.75);
+            backdrop-filter: blur(8px);
+            color: white; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transform: scale(0.8);
+            transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+        }
+        .card-crop-btn svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
+        .page-card:hover .card-crop-btn { opacity: 1; transform: scale(1); }
+        .card-crop-btn:hover { background: #16a34a !important; transform: scale(1.1) !important; box-shadow: 0 0 14px rgba(22,163,74,0.4); }
+
         /* Card footer */
         .card-footer {
             padding: 0.5rem 0.7rem;
@@ -485,6 +503,189 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.6);
         }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── Gallery button in header ── */
+        #gallery-btn {
+            display: none; align-items: center; gap: 0.4rem;
+            padding: 0.38rem 0.75rem;
+            border-radius: 9px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-2);
+            cursor: pointer; font-size: 0.78rem; font-weight: 600;
+            transition: all 0.2s; flex-shrink: 0; position: relative;
+        }
+        #gallery-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
+        #gallery-btn:hover { border-color: #16a34a; color: #4ade80; background: rgba(22,163,74,0.08); }
+        #gallery-btn.has-items { display: flex; }
+        #gallery-badge {
+            background: #16a34a; color: white;
+            border-radius: 99px; font-size: 0.68rem; font-weight: 700;
+            padding: 0.05rem 0.38rem; min-width: 18px; text-align: center;
+        }
+
+        /* ── Zoom Modal — crop mode ── */
+        #zm-scissors { margin-left: 0.25rem; }
+        #zm-scissors.active { border-color: #16a34a !important; color: #4ade80 !important; background: rgba(22,163,74,0.12) !important; }
+
+        #zoom-img-box { position: relative; display: inline-block; line-height: 0; }
+        #crop-canvas {
+            position: absolute; inset: 0;
+            display: none; cursor: crosshair;
+            border-radius: 2px;
+        }
+        #zoom-modal.crop-mode #crop-canvas { display: block; }
+        #zoom-modal.crop-mode #zoom-scroll { cursor: crosshair; }
+
+        /* ── Gallery Modal ── */
+        #gallery-modal {
+            display: none; position: fixed; inset: 0; z-index: 700;
+        }
+        #gallery-modal.open { display: flex; align-items: center; justify-content: center; }
+
+        #gallery-backdrop {
+            position: absolute; inset: 0;
+            background: rgba(0,0,0,0.88);
+            backdrop-filter: blur(14px);
+            cursor: pointer;
+        }
+
+        #gallery-panel {
+            position: relative; z-index: 1;
+            display: flex; flex-direction: column;
+            width: min(95vw, 1050px);
+            height: min(90vh, 820px);
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 18px; overflow: hidden;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04);
+            animation: zmPanelIn 0.22s ease;
+        }
+
+        #gallery-top {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem 1.1rem;
+            border-bottom: 1px solid var(--border);
+            background: rgba(13,13,26,0.9);
+            flex-shrink: 0; user-select: none;
+        }
+        #gallery-title { flex: 1; font-size: 0.9rem; font-weight: 700; color: var(--text); }
+        #gallery-title span { color: var(--text-3); font-weight: 500; font-size: 0.78rem; margin-left: 0.4rem; }
+
+        .gal-top-btn {
+            padding: 0.35rem 0.8rem; border-radius: 7px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text-2); font-size: 0.76rem; font-weight: 500;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .gal-top-btn:hover { border-color: rgba(255,255,255,0.15); color: var(--text); background: rgba(255,255,255,0.06); }
+        .gal-top-btn.danger:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
+        .gal-top-btn.success { border-color: rgba(22,163,74,0.35); color: #4ade80; background: rgba(22,163,74,0.06); }
+        .gal-top-btn.success:hover { background: rgba(22,163,74,0.14); }
+
+        #gal-close {
+            width: 28px; height: 28px; border-radius: 7px;
+            border: 1px solid var(--border); background: transparent; color: var(--text-3);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s; flex-shrink: 0;
+        }
+        #gal-close svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; fill: none; }
+        #gal-close:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
+
+        #gallery-body {
+            flex: 1; overflow-y: auto; padding: 1.25rem;
+            scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+        #gallery-body::-webkit-scrollbar { width: 5px; }
+        #gallery-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+
+        #gallery-empty {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; gap: 1rem; color: var(--text-3);
+        }
+        #gallery-empty svg { width: 48px; height: 48px; stroke: var(--text-3); stroke-width: 1.5; fill: none; opacity: 0.4; }
+        #gallery-empty p { font-size: 0.88rem; }
+
+        #gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .gal-item {
+            border-radius: 12px; border: 1px solid var(--border);
+            background: var(--bg-card); overflow: hidden;
+            display: flex; flex-direction: column;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .gal-item:hover { border-color: rgba(255,255,255,0.12); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+
+        .gal-thumb-wrap {
+            background: #fff; position: relative; overflow: hidden;
+            max-height: 220px; display: flex; align-items: center; justify-content: center;
+        }
+        .gal-thumb-wrap img { display: block; width: 100%; height: auto; object-fit: contain; max-height: 220px; cursor: zoom-in; transition: opacity 0.15s; }
+        .gal-thumb-wrap img:hover { opacity: 0.88; }
+
+        /* ── Gallery Lightbox ── */
+        #gal-lightbox { display: none; position: fixed; inset: 0; z-index: 800; }
+        #gal-lightbox.open { display: flex; align-items: center; justify-content: center; }
+        #gal-lb-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.92); backdrop-filter: blur(16px); cursor: zoom-out; }
+        #gal-lb-panel {
+            position: relative; z-index: 1;
+            display: flex; flex-direction: column;
+            width: min(92vw, 1000px); height: min(90vh, 820px);
+            background: var(--bg-2); border: 1px solid var(--border);
+            border-radius: 18px; overflow: hidden;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04);
+            animation: zmPanelIn 0.2s ease;
+        }
+        #gal-lb-top {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.65rem 1rem; flex-shrink: 0; user-select: none;
+            border-bottom: 1px solid var(--border); background: rgba(13,13,26,0.9);
+        }
+        #gal-lb-lbl { flex: 1; font-size: 0.8rem; color: var(--text-2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #gal-lb-ctrl { display: flex; align-items: center; gap: 0.3rem; }
+        #gal-lb-pct { font-size: 0.78rem; color: var(--text-3); font-weight: 600; min-width: 42px; text-align: center; }
+        #gal-lb-close {
+            width: 28px; height: 28px; border-radius: 7px;
+            border: 1px solid var(--border); background: transparent; color: var(--text-3);
+            cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0;
+        }
+        #gal-lb-close svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; fill: none; }
+        #gal-lb-close:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
+        #gal-lb-body { flex: 1; display: flex; align-items: stretch; overflow: hidden; min-height: 0; }
+        #gal-lb-scroll {
+            flex: 1; overflow: auto; padding: 20px;
+            display: grid; place-items: center;
+            scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+        #gal-lb-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+        #gal-lb-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 99px; }
+        #gal-lb-img { display: block; max-width: none; user-select: none; box-shadow: 0 4px 40px rgba(0,0,0,0.8); border-radius: 2px; }
+
+        .gal-info {
+            padding: 0.5rem 0.65rem 0.35rem;
+            border-top: 1px solid var(--border);
+        }
+        .gal-info-file { font-size: 0.72rem; color: var(--text-2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .gal-info-meta { font-size: 0.68rem; color: var(--text-3); margin-top: 1px; }
+
+        .gal-actions {
+            display: flex; gap: 0.35rem;
+            padding: 0.45rem 0.65rem;
+            border-top: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+        }
+        .gal-btn {
+            flex: 1; padding: 0.3rem 0;
+            border-radius: 6px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-3);
+            font-size: 0.72rem; font-weight: 600; cursor: pointer;
+            transition: all 0.15s; text-align: center;
+        }
+        .gal-btn.save { border-color: rgba(22,163,74,0.3); color: #4ade80; }
+        .gal-btn.save:hover { background: rgba(22,163,74,0.12); border-color: #16a34a; }
+        .gal-btn.discard:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
 
         /* ── Zoom Modal ── */
         #zoom-modal {
@@ -648,6 +849,11 @@
             <div class="hf-name" id="hf-name">—</div>
             <div class="hf-meta" id="hf-meta">—</div>
         </div>
+        <button id="gallery-btn" title="Galeria de recortes">
+            <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+            Galeria
+            <span id="gallery-badge">0</span>
+        </button>
     </header>
 
     <!-- Tab Bar -->
@@ -709,6 +915,56 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Gallery Lightbox -->
+<div id="gal-lightbox">
+    <div id="gal-lb-backdrop"></div>
+    <div id="gal-lb-panel">
+        <div id="gal-lb-top">
+            <span id="gal-lb-lbl"></span>
+            <div id="gal-lb-ctrl">
+                <button class="zm-btn" id="gal-lb-out" title="Diminuir (−)">−</button>
+                <span id="gal-lb-pct">100%</span>
+                <button class="zm-btn" id="gal-lb-in" title="Aumentar (+)">+</button>
+                <button class="zm-btn" id="gal-lb-fit" title="Ajustar à tela (0)">
+                    <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                </button>
+            </div>
+            <button id="gal-lb-close">
+                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div id="gal-lb-body">
+            <button class="zm-nav" id="gal-lb-prev" title="Anterior (←)">&#8249;</button>
+            <div id="gal-lb-scroll">
+                <img id="gal-lb-img" alt="">
+            </div>
+            <button class="zm-nav" id="gal-lb-next" title="Próximo (→)">&#8250;</button>
+        </div>
+    </div>
+</div>
+
+<!-- Gallery Modal -->
+<div id="gallery-modal">
+    <div id="gallery-backdrop"></div>
+    <div id="gallery-panel">
+        <div id="gallery-top">
+            <span id="gallery-title">Galeria de Recortes <span id="gal-count"></span></span>
+            <button class="gal-top-btn success" id="gal-save-all">Salvar todos</button>
+            <button class="gal-top-btn danger" id="gal-discard-all">Descartar todos</button>
+            <button id="gal-close">
+                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div id="gallery-body">
+            <div id="gallery-empty">
+                <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+                <p>Nenhum recorte ainda — use a tesoura em uma página</p>
+            </div>
+            <div id="gallery-grid"></div>
+        </div>
+    </div>
+</div>
+
 <!-- Zoom Modal -->
 <div id="zoom-modal">
     <div id="zoom-backdrop"></div>
@@ -722,6 +978,9 @@
                 <button class="zm-btn" id="zm-fit" title="Ajustar à tela (0)">
                     <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
                 </button>
+                <button class="zm-btn" id="zm-scissors" title="Recortar área (C)">
+                    <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+                </button>
             </div>
             <button id="zm-close">
                 <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -730,7 +989,10 @@
         <div id="zoom-body">
             <button class="zm-nav" id="zm-prev" title="Página anterior (←)">&#8249;</button>
             <div id="zoom-scroll">
-                <img id="zoom-img" alt="">
+                <div id="zoom-img-box">
+                    <img id="zoom-img" alt="">
+                    <canvas id="crop-canvas"></canvas>
+                </div>
             </div>
             <button class="zm-nav" id="zm-next" title="Próxima página (→)">&#8250;</button>
         </div>
@@ -1147,6 +1409,9 @@ function makeCard(tab, n) {
             <svg viewBox="0 0 24 24"><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/>
             <polyline points="9,21 3,21 3,15"/><line x1="14" y1="10" x2="3" y2="21"/></svg>
         </button>
+        <button class="card-crop-btn" title="Recortar página ${n}">
+            <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+        </button>
         <button class="card-dl-btn" title="Baixar página ${n}">
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1160,19 +1425,23 @@ function makeCard(tab, n) {
         <div class="card-overlay"></div>`;
 
     card.addEventListener('click', e => {
-        if (e.target.closest('.card-dl-btn') || e.target.closest('.card-expand-btn')) return;
+        if (e.target.closest('.card-dl-btn') || e.target.closest('.card-expand-btn') || e.target.closest('.card-crop-btn')) return;
         onCardClick(e, tab, n);
     });
     card.querySelector('.card-expand-btn').addEventListener('click', e => {
         e.stopPropagation();
         openZoom(tab, n);
     });
+    card.querySelector('.card-crop-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        openZoom(tab, n, true); // true = activate crop mode right away
+    });
     card.querySelector('.card-dl-btn').addEventListener('click', e => {
         e.stopPropagation();
         downloadSinglePage(tab, n);
     });
     card.addEventListener('dblclick', e => {
-        if (e.target.closest('.card-dl-btn') || e.target.closest('.card-expand-btn')) return;
+        if (e.target.closest('.card-dl-btn') || e.target.closest('.card-expand-btn') || e.target.closest('.card-crop-btn')) return;
         openZoom(tab, n);
     });
 
@@ -1333,8 +1602,10 @@ const zmPctEl    = document.getElementById('zm-pct');
 const zoomScroll = document.getElementById('zoom-scroll');
 const zmPrevBtn  = document.getElementById('zm-prev');
 const zmNextBtn  = document.getElementById('zm-next');
+const cropCanvas = document.getElementById('crop-canvas');
+const zmScissors = document.getElementById('zm-scissors');
 
-let zm = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1, busy: false };
+let zm = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1 };
 
 document.getElementById('zoom-backdrop').addEventListener('click', closeZoom);
 document.getElementById('zm-close').addEventListener('click', closeZoom);
@@ -1343,30 +1614,36 @@ document.getElementById('zm-out').addEventListener('click', () => zoomStep(1 / 1
 document.getElementById('zm-fit').addEventListener('click', zoomFit);
 zmPrevBtn.addEventListener('click', () => zmNavPage(-1));
 zmNextBtn.addEventListener('click', () => zmNavPage(1));
+zmScissors.addEventListener('click', toggleCropMode);
 
 zoomScroll.addEventListener('wheel', e => {
+    if (zoomModal.classList.contains('crop-mode')) return;
     e.preventDefault();
     zoomStep(e.deltaY < 0 ? 1.15 : (1 / 1.15));
 }, { passive: false });
 
 document.addEventListener('keydown', e => {
     if (!zoomModal.classList.contains('open')) return;
-    if (e.key === 'Escape')                              closeZoom();
-    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  zmNavPage(-1);
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') zmNavPage(1);
-    if (e.key === '+' || e.key === '=')                  zoomStep(1.25);
-    if (e.key === '-')                                   zoomStep(1 / 1.25);
-    if (e.key === '0')                                   zoomFit();
+    if (e.key === 'Escape') {
+        if (zoomModal.classList.contains('crop-mode')) { exitCropMode(); return; }
+        closeZoom(); return;
+    }
+    if (zoomModal.classList.contains('crop-mode')) return;
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   zmNavPage(-1);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown')  zmNavPage(1);
+    if (e.key === '+' || e.key === '=')                   zoomStep(1.25);
+    if (e.key === '-')                                    zoomStep(1 / 1.25);
+    if (e.key === '0')                                    zoomFit();
+    if (e.key === 'c' || e.key === 'C')                   toggleCropMode();
 });
 
-async function openZoom(tab, n) {
+async function openZoom(tab, n, startCrop = false) {
     zm.tab  = tab;
     zm.page = n;
-    zm.busy = false;
     zoomModal.classList.add('open');
+    exitCropMode();
     document.body.style.overflow = 'hidden';
 
-    // Show low-res thumbnail immediately so the modal isn't empty
     if (tab.thumbs[n]) {
         zoomImgEl.src = tab.thumbs[n];
         await new Promise(r => {
@@ -1383,11 +1660,13 @@ async function openZoom(tab, n) {
     zmNextBtn.disabled = n >= tab.totalPages;
     zmUpdateLabel();
 
-    // Render HD in background
-    loadZoomHD(tab, n);
+    loadZoomHD(tab, n).then(() => {
+        if (startCrop && zm.tab?.id === tab.id && zm.page === n) enterCropMode();
+    });
 }
 
 function closeZoom() {
+    exitCropMode();
     zoomModal.classList.remove('open');
     document.body.style.overflow = '';
     zm.tab = null;
@@ -1395,27 +1674,24 @@ function closeZoom() {
 
 async function loadZoomHD(tab, n) {
     if (!tab.thumbsHD) tab.thumbsHD = {};
-    if (tab.thumbsHD[n]) {
-        zmSwapHD(tab, n);
-        return;
+    if (!tab.thumbsHD[n]) {
+        try {
+            const page  = await tab.pdfJsDoc.getPage(n);
+            const vp    = page.getViewport({ scale: 1 });
+            const scale = Math.min(3.5, 1800 / vp.width);
+            const rvp   = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            canvas.width = rvp.width; canvas.height = rvp.height;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: rvp, background: 'white' }).promise;
+            tab.thumbsHD[n] = { src: canvas.toDataURL('image/jpeg', 0.92), w: rvp.width, h: rvp.height };
+        } catch { return; }
     }
-    try {
-        const page  = await tab.pdfJsDoc.getPage(n);
-        const vp    = page.getViewport({ scale: 1 });
-        const scale = Math.min(3.5, 1800 / vp.width);
-        const rvp   = page.getViewport({ scale });
-        const canvas = document.createElement('canvas');
-        canvas.width = rvp.width; canvas.height = rvp.height;
-        await page.render({ canvasContext: canvas.getContext('2d'), viewport: rvp, background: 'white' }).promise;
-        tab.thumbsHD[n] = { src: canvas.toDataURL('image/jpeg', 0.92), w: rvp.width, h: rvp.height };
-    } catch { return; }
     zmSwapHD(tab, n);
 }
 
 function zmSwapHD(tab, n) {
     if (!zm.tab || zm.tab.id !== tab.id || zm.page !== n) return;
     const hd = tab.thumbsHD[n];
-    // Compute the current visual size and maintain it when swapping to HD
     const displayW = zm.naturalW * zm.zoom;
     zm.naturalW = hd.w;
     zm.naturalH = hd.h;
@@ -1441,6 +1717,7 @@ function applyZoom() {
     const h = Math.round(zm.naturalH * zm.zoom);
     zoomImgEl.style.width  = w + 'px';
     zoomImgEl.style.height = h + 'px';
+    syncCropCanvas();
     zmUpdateLabel();
 }
 
@@ -1451,7 +1728,6 @@ function zmNavPage(delta) {
     zm.page = next;
     zmPrevBtn.disabled = next <= 1;
     zmNextBtn.disabled = next >= zm.tab.totalPages;
-    zmUpdateLabel();
     openZoom(zm.tab, next);
 }
 
@@ -1459,6 +1735,296 @@ function zmUpdateLabel() {
     if (!zm.tab) return;
     zoomLblEl.textContent = `Pág ${zm.page} de ${zm.tab.totalPages}`;
     zmPctEl.textContent   = Math.round(zm.zoom * 100) + '%';
+}
+
+// ── Crop Mode ──
+let crop = { drawing: false, x0: 0, y0: 0 };
+
+function syncCropCanvas() {
+    const w = parseInt(zoomImgEl.style.width)  || zoomImgEl.naturalWidth;
+    const h = parseInt(zoomImgEl.style.height) || zoomImgEl.naturalHeight;
+    if (cropCanvas.width !== w || cropCanvas.height !== h) {
+        cropCanvas.width  = w;
+        cropCanvas.height = h;
+    }
+}
+
+function toggleCropMode() {
+    if (zoomModal.classList.contains('crop-mode')) exitCropMode();
+    else enterCropMode();
+}
+
+function enterCropMode() {
+    syncCropCanvas();
+    zoomModal.classList.add('crop-mode');
+    zmScissors.classList.add('active');
+}
+
+function exitCropMode() {
+    zoomModal.classList.remove('crop-mode');
+    zmScissors.classList.remove('active');
+    crop.drawing = false;
+    const ctx = cropCanvas.getContext('2d');
+    ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+}
+
+cropCanvas.addEventListener('mousedown', e => {
+    if (!zoomModal.classList.contains('crop-mode')) return;
+    const r = cropCanvas.getBoundingClientRect();
+    crop.drawing = true;
+    crop.x0 = e.clientX - r.left;
+    crop.y0 = e.clientY - r.top;
+});
+
+cropCanvas.addEventListener('mousemove', e => {
+    if (!crop.drawing) return;
+    const r   = cropCanvas.getBoundingClientRect();
+    const x1  = e.clientX - r.left;
+    const y1  = e.clientY - r.top;
+    const ctx = cropCanvas.getContext('2d');
+    ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+    const rx = Math.min(crop.x0, x1), ry = Math.min(crop.y0, y1);
+    const rw = Math.abs(x1 - crop.x0),  rh = Math.abs(y1 - crop.y0);
+    ctx.clearRect(rx, ry, rw, rh);
+    ctx.strokeStyle = '#7c3aed';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([5, 3]);
+    ctx.strokeRect(rx, ry, rw, rh);
+    // corner handles
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#c4b5fd';
+    [[rx,ry],[rx+rw,ry],[rx,ry+rh],[rx+rw,ry+rh]].forEach(([cx,cy]) => {
+        ctx.fillRect(cx-3, cy-3, 6, 6);
+    });
+});
+
+cropCanvas.addEventListener('mouseup', async e => {
+    if (!crop.drawing) return;
+    crop.drawing = false;
+    const r  = cropCanvas.getBoundingClientRect();
+    const x1 = e.clientX - r.left;
+    const y1 = e.clientY - r.top;
+    const rx = Math.min(crop.x0, x1), ry = Math.min(crop.y0, y1);
+    const rw = Math.abs(x1 - crop.x0),  rh = Math.abs(y1 - crop.y0);
+    if (rw < 6 || rh < 6) { exitCropMode(); return; }
+    await performCrop(rx, ry, rw, rh);
+    exitCropMode();
+});
+
+cropCanvas.addEventListener('mouseleave', e => {
+    if (crop.drawing) {
+        crop.drawing = false;
+        const ctx = cropCanvas.getContext('2d');
+        ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+    }
+});
+
+async function performCrop(rx, ry, rw, rh) {
+    const tab = zm.tab;
+    const n   = zm.page;
+    if (!tab) return;
+
+    // Ensure HD is available
+    if (!tab.thumbsHD?.[n]) await loadZoomHD(tab, n);
+    const hd = tab.thumbsHD?.[n];
+    if (!hd) return;
+
+    // Convert display coords → natural HD coords
+    const displayW = parseInt(zoomImgEl.style.width)  || zm.naturalW;
+    const displayH = parseInt(zoomImgEl.style.height) || zm.naturalH;
+    const scaleX = hd.w / displayW;
+    const scaleY = hd.h / displayH;
+    const srcX = Math.round(rx * scaleX), srcY = Math.round(ry * scaleY);
+    const srcW = Math.round(rw * scaleX), srcH = Math.round(rh * scaleY);
+    if (srcW < 2 || srcH < 2) return;
+
+    const img = new Image();
+    img.src = hd.src;
+    await new Promise(r => img.complete ? r() : (img.onload = r));
+
+    const out = document.createElement('canvas');
+    out.width = srcW; out.height = srcH;
+    out.getContext('2d').drawImage(img, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+
+    galleryAdd({
+        id:       `crop_${Date.now()}`,
+        dataURL:  out.toDataURL('image/png'),
+        fileName: tab.fileName,
+        shortName:tab.shortName,
+        page:     n,
+        w: srcW, h: srcH
+    });
+    toast('✂ Recorte adicionado à galeria!');
+}
+
+// ── Gallery ──
+let galleryItems = [];
+
+const galleryModal  = document.getElementById('gallery-modal');
+const galleryGrid   = document.getElementById('gallery-grid');
+const galleryEmpty  = document.getElementById('gallery-empty');
+const galCount      = document.getElementById('gal-count');
+const galleryBtnEl  = document.getElementById('gallery-btn');
+const galleryBadge  = document.getElementById('gallery-badge');
+
+document.getElementById('gallery-backdrop').addEventListener('click', closeGallery);
+document.getElementById('gal-close').addEventListener('click', closeGallery);
+galleryBtnEl.addEventListener('click', openGallery);
+document.getElementById('gal-save-all').addEventListener('click', () => { galleryItems.forEach(galSave); });
+document.getElementById('gal-discard-all').addEventListener('click', () => {
+    galleryItems = [];
+    renderGallery();
+    updateGalleryBadge();
+});
+
+function openGallery() {
+    renderGallery();
+    galleryModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+function closeGallery() {
+    galleryModal.classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+function galleryAdd(item) {
+    galleryItems.push(item);
+    updateGalleryBadge();
+}
+
+function updateGalleryBadge() {
+    galleryBadge.textContent = galleryItems.length;
+    galleryBtnEl.classList.toggle('has-items', galleryItems.length > 0);
+}
+
+function galSave(item) {
+    const a = document.createElement('a');
+    a.href     = item.dataURL;
+    a.download = `${item.shortName}_pag${item.page}_recorte_${item.id.slice(-6)}.png`;
+    a.click();
+}
+
+function galDiscard(id) {
+    galleryItems = galleryItems.filter(i => i.id !== id);
+    updateGalleryBadge();
+    renderGallery();
+}
+
+function renderGallery() {
+    galCount.textContent = galleryItems.length ? `(${galleryItems.length})` : '';
+    galleryEmpty.style.display = galleryItems.length ? 'none' : 'flex';
+    galleryGrid.style.display  = galleryItems.length ? 'grid' : 'none';
+    galleryGrid.innerHTML = '';
+    galleryItems.forEach((item, idx) => {
+        const el = document.createElement('div');
+        el.className = 'gal-item';
+        el.innerHTML = `
+            <div class="gal-thumb-wrap"><img src="${item.dataURL}" alt="Recorte pág ${item.page}"></div>
+            <div class="gal-info">
+                <div class="gal-info-file">${item.fileName}</div>
+                <div class="gal-info-meta">Pág. ${item.page} · ${item.w}×${item.h} px</div>
+            </div>
+            <div class="gal-actions">
+                <button class="gal-btn save">Salvar</button>
+                <button class="gal-btn discard">Descartar</button>
+            </div>`;
+        el.querySelector('.gal-thumb-wrap img').addEventListener('click', () => galLbOpen(idx));
+        el.querySelector('.save').addEventListener('click', () => galSave(item));
+        el.querySelector('.discard').addEventListener('click', () => galDiscard(item.id));
+        galleryGrid.appendChild(el);
+    });
+}
+
+// ── Gallery Lightbox ──
+const galLightbox  = document.getElementById('gal-lightbox');
+const galLbImg     = document.getElementById('gal-lb-img');
+const galLbLbl     = document.getElementById('gal-lb-lbl');
+const galLbPct     = document.getElementById('gal-lb-pct');
+const galLbScroll  = document.getElementById('gal-lb-scroll');
+const galLbPrevBtn = document.getElementById('gal-lb-prev');
+const galLbNextBtn = document.getElementById('gal-lb-next');
+
+let galLb = { idx: 0, zoom: 1, naturalW: 1, naturalH: 1 };
+
+document.getElementById('gal-lb-backdrop').addEventListener('click', galLbClose);
+document.getElementById('gal-lb-close').addEventListener('click', galLbClose);
+document.getElementById('gal-lb-in').addEventListener('click', () => galLbStep(1.25));
+document.getElementById('gal-lb-out').addEventListener('click', () => galLbStep(1 / 1.25));
+document.getElementById('gal-lb-fit').addEventListener('click', galLbFit);
+galLbPrevBtn.addEventListener('click', () => galLbNav(-1));
+galLbNextBtn.addEventListener('click', () => galLbNav(1));
+
+galLbScroll.addEventListener('wheel', e => {
+    e.preventDefault();
+    galLbStep(e.deltaY < 0 ? 1.15 : (1 / 1.15));
+}, { passive: false });
+
+document.addEventListener('keydown', e => {
+    if (!galLightbox.classList.contains('open')) return;
+    if (e.key === 'Escape')                              galLbClose();
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  galLbNav(-1);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') galLbNav(1);
+    if (e.key === '+' || e.key === '=')                  galLbStep(1.25);
+    if (e.key === '-')                                   galLbStep(1 / 1.25);
+    if (e.key === '0')                                   galLbFit();
+});
+
+function galLbOpen(idx) {
+    galLb.idx = idx;
+    galLightbox.classList.add('open');
+    galLbLoad();
+}
+
+function galLbClose() {
+    galLightbox.classList.remove('open');
+}
+
+function galLbLoad() {
+    const item = galleryItems[galLb.idx];
+    if (!item) return;
+    galLbImg.src = item.dataURL;
+    galLbImg.onload = () => {
+        galLb.naturalW = galLbImg.naturalWidth;
+        galLb.naturalH = galLbImg.naturalHeight;
+        galLbFit();
+    };
+    if (galLbImg.complete && galLbImg.naturalWidth) {
+        galLb.naturalW = galLbImg.naturalWidth;
+        galLb.naturalH = galLbImg.naturalHeight;
+        galLbFit();
+    }
+    galLbPrevBtn.disabled = galLb.idx <= 0;
+    galLbNextBtn.disabled = galLb.idx >= galleryItems.length - 1;
+    galLbLbl.textContent = `${galLb.idx + 1} de ${galleryItems.length} · ${item.fileName} · Pág. ${item.page} · ${item.w}×${item.h}px`;
+}
+
+function galLbNav(delta) {
+    const next = galLb.idx + delta;
+    if (next < 0 || next >= galleryItems.length) return;
+    galLb.idx = next;
+    galLbLoad();
+}
+
+function galLbFit() {
+    const aw = galLbScroll.clientWidth  - 40;
+    const ah = galLbScroll.clientHeight - 40;
+    galLb.zoom = Math.min(aw / galLb.naturalW, ah / galLb.naturalH, 1);
+    galLbApply();
+}
+
+function galLbStep(factor) {
+    galLb.zoom = Math.min(10, Math.max(0.08, galLb.zoom * factor));
+    galLbApply();
+}
+
+function galLbApply() {
+    const w = Math.round(galLb.naturalW * galLb.zoom);
+    const h = Math.round(galLb.naturalH * galLb.zoom);
+    galLbImg.style.width  = w + 'px';
+    galLbImg.style.height = h + 'px';
+    galLbPct.textContent  = Math.round(galLb.zoom * 100) + '%';
 }
 
 // ── Init: restore previous session ──
