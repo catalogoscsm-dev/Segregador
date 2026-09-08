@@ -1652,8 +1652,7 @@ async function openZoom(tab, n, startCrop = false) {
         });
         zm.naturalW = zoomImgEl.naturalWidth  || 200;
         zm.naturalH = zoomImgEl.naturalHeight || 280;
-        zm.zoom = 0.34;
-        applyZoom();
+        zoomFit();
     }
 
     zmPrevBtn.disabled = n <= 1;
@@ -1703,7 +1702,7 @@ function zmSwapHD(tab, n) {
 function zoomFit() {
     const aw = zoomScroll.clientWidth  - 40;
     const ah = zoomScroll.clientHeight - 40;
-    zm.zoom = Math.min(aw / zm.naturalW, ah / zm.naturalH, 1);
+    zm.zoom = Math.min(aw / zm.naturalW, ah / zm.naturalH);
     applyZoom();
 }
 
