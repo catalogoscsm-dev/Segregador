@@ -469,6 +469,22 @@
         .btn-dl-pdf:hover { transform: translateY(-2px); box-shadow: 0 8px 35px rgba(124,58,237,0.45); }
         .btn-dl:active { transform: translateY(0) scale(0.98); }
 
+        .btn-dl-subgroup {
+            background: linear-gradient(135deg, #0e7490, #0891b2);
+            color: white; box-shadow: 0 4px 20px rgba(8,145,178,0.35);
+        }
+        .btn-dl-subgroup:hover { transform: translateY(-2px); box-shadow: 0 8px 35px rgba(8,145,178,0.5); }
+
+        /* Sub-group tab indicator */
+        .tab-item.subgroup .tab-dot { background: var(--a3); box-shadow: 0 0 6px var(--glow2); }
+        .tab-item.subgroup.active .tab-dot { background: var(--a3); box-shadow: 0 0 8px rgba(6,182,212,0.6); }
+        .tab-subgroup-badge {
+            font-size: 0.62rem; font-weight: 700; letter-spacing: 0.03em;
+            padding: 0.05rem 0.3rem; border-radius: 4px;
+            background: rgba(6,182,212,0.15); border: 1px solid rgba(6,182,212,0.3);
+            color: var(--a3); flex-shrink: 0; line-height: 1.4;
+        }
+
         /* ─ Loading Overlay ─ */
         #loading-overlay {
             display: none; position: fixed; inset: 0;
@@ -889,6 +905,12 @@
             <div class="bb-hint">Prontas para download</div>
         </div>
         <div class="bb-actions">
+            <button class="btn-dl btn-dl-subgroup" id="btn-subgroup" title="Abrir seleção como sub-grupo numa nova aba">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="2,8.5 12,15.5 22,8.5"/>
+                </svg>
+                Sub-grupo
+            </button>
             <button class="btn-dl btn-dl-zip" id="btn-zip">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
@@ -1034,13 +1056,16 @@ async function dbSaveTab(tab) {
     return new Promise((res, rej) => {
         const tx = db.transaction(ST_TABS, 'readwrite');
         tx.objectStore(ST_TABS).put({
-            id:       tab.id,
-            fileName: tab.fileName,
-            fileSize: tab.fileSize,
-            pdfBytes: tab.pdfBytes,
-            selected: [...tab.selected],
-            lastIdx:  tab.lastIdx,
-            order:    tabs.indexOf(tab)
+            id:          tab.id,
+            fileName:    tab.fileName,
+            fileSize:    tab.fileSize,
+            pdfBytes:    tab.pdfBytes,
+            selected:    [...tab.selected],
+            lastIdx:     tab.lastIdx,
+            order:       tabs.indexOf(tab),
+            isSubgroup:  !!tab.isSubgroup,
+            parentPages: tab.parentPages ?? null,
+            parentTabId: tab.parentTabId ?? null
         });
         tx.oncomplete = res;
         tx.onerror    = e => rej(e.target.error);
@@ -1164,17 +1189,20 @@ async function restoreState() {
             ]);
             const lsSel = lsLoadSelection(s.id);
             tabs.push({
-                id:         s.id,
-                fileName:   s.fileName,
-                shortName:  s.fileName.replace(/\.pdf$/i, ''),
-                fileSize:   s.fileSize,
+                id:          s.id,
+                fileName:    s.fileName,
+                shortName:   s.fileName.replace(/\.pdf$/i, ''),
+                fileSize:    s.fileSize,
                 pdfJsDoc,
                 pdfLibDoc,
-                pdfBytes:   s.pdfBytes,
-                totalPages: pdfJsDoc.numPages,
-                selected:   new Set(lsSel ?? s.selected),
-                lastIdx:    s.lastIdx,
-                thumbs:     cachedThumbs   // já prontas do IndexedDB — sem re-render
+                pdfBytes:    s.pdfBytes,
+                totalPages:  pdfJsDoc.numPages,
+                selected:    new Set(lsSel ?? s.selected),
+                lastIdx:     s.lastIdx,
+                thumbs:      cachedThumbs,
+                isSubgroup:  !!s.isSubgroup,
+                parentPages: s.parentPages ?? null,
+                parentTabId: s.parentTabId ?? null
             });
         } catch (e) {
             console.warn('[CSM Splitter] Falha ao restaurar aba:', s.fileName, e);
@@ -1277,6 +1305,7 @@ document.getElementById('btn-even').addEventListener('click', () => {
 
 document.getElementById('btn-pdf').addEventListener('click', downloadPDF);
 document.getElementById('btn-zip').addEventListener('click', downloadZIP);
+document.getElementById('btn-subgroup').addEventListener('click', createSubgroup);
 
 // ── Load file → create tab ──
 async function handleFile(file) {
@@ -1362,9 +1391,10 @@ function syncTabBar() {
 
     tabs.forEach(t => {
         const el = document.createElement('div');
-        el.className = 'tab-item' + (t.id === activeTabId ? ' active' : '');
+        el.className = 'tab-item' + (t.id === activeTabId ? ' active' : '') + (t.isSubgroup ? ' subgroup' : '');
         el.innerHTML = `
             <div class="tab-dot"></div>
+            ${t.isSubgroup ? `<span class="tab-subgroup-badge">SUB</span>` : ''}
             <span class="tab-name">${t.fileName}</span>
             <div class="tab-close" title="Fechar">
                 <svg viewBox="0 0 8 8"><line x1="1" y1="1" x2="7" y2="7"/><line x1="7" y1="1" x2="1" y2="7"/></svg>
@@ -1520,6 +1550,66 @@ function syncSelection(tab) {
     bbCount.textContent = `${count} página${count!==1?'s':''} selecionada${count!==1?'s':''}`;
     bottomBar.classList.toggle('visible', count > 0);
     scheduleTabSave(tab); // persist selection change
+}
+
+// ── Sub-group ──
+async function createSubgroup() {
+    const tab = activeTab();
+    if (!tab?.selected.size) return;
+
+    const pages = [...tab.selected].sort((a, b) => a - b);
+    showLoader(`Criando sub-grupo com ${pages.length} página(s)...`, 10);
+
+    try {
+        const out   = await PDFLib.PDFDocument.create();
+        const idxs  = pages.map(p => p - 1);
+        const copied = await out.copyPages(tab.pdfLibDoc, idxs);
+        copied.forEach(p => out.addPage(p));
+        setProgress(50);
+
+        const pdfBytes = await out.save();
+        setProgress(65);
+
+        const [pdfJsDoc, pdfLibDoc] = await Promise.all([
+            pdfjsLib.getDocument({ data: pdfBytes.slice(0) }).promise,
+            PDFLib.PDFDocument.load(pdfBytes)
+        ]);
+        setProgress(90);
+
+        // Reuse parent thumbnails (page mapping: subgroup page i+1 = parent page pages[i])
+        const thumbs = {};
+        pages.forEach((parentPage, i) => {
+            if (tab.thumbs[parentPage]) thumbs[i + 1] = tab.thumbs[parentPage];
+        });
+
+        const label   = `${tab.shortName} — sub [${pages.length}]`;
+        const subTab  = {
+            id:          `t_${Date.now()}`,
+            fileName:    label + '.pdf',
+            shortName:   label,
+            fileSize:    pdfBytes.byteLength,
+            pdfJsDoc,
+            pdfLibDoc,
+            pdfBytes,
+            totalPages:  pdfJsDoc.numPages,
+            selected:    new Set(),
+            lastIdx:     null,
+            thumbs,
+            isSubgroup:  true,
+            parentPages: pages,
+            parentTabId: tab.id
+        };
+
+        tabs.push(subTab);
+        dbSaveTab(subTab);
+        hideLoader();
+        activateTab(subTab.id);
+        toast(`✓ Sub-grupo aberto com ${pages.length} página(s)!`);
+    } catch (err) {
+        hideLoader();
+        toast('Erro ao criar sub-grupo.');
+        console.error(err);
+    }
 }
 
 // ── Downloads ──
