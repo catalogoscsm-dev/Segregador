@@ -1639,14 +1639,19 @@ async function createSubgroup() {
 }
 
 // ── Downloads ──
+function realPageNum(tab, n) {
+    return (tab.parentPages ? tab.parentPages[n - 1] : n) ?? n;
+}
+
 async function downloadSinglePage(tab, n) {
     try {
         const doc = await PDFLib.PDFDocument.create();
         const [pg] = await doc.copyPages(tab.pdfLibDoc, [n-1]);
         doc.addPage(pg);
         const bytes = await doc.save();
-        dlBlob(new Blob([bytes], {type:'application/pdf'}), `${tab.shortName}_pag_${String(n).padStart(3,'0')}.pdf`);
-        toast(`✓ Página ${n} baixada!`);
+        const rn = realPageNum(tab, n);
+        dlBlob(new Blob([bytes], {type:'application/pdf'}), `${tab.shortName} pag ${rn}.pdf`);
+        toast(`✓ Página ${rn} baixada!`);
     } catch (err) { toast('Erro ao baixar a página.'); console.error(err); }
 }
 
@@ -1664,9 +1669,10 @@ async function downloadPageAsImage(tab, n) {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         await page.render({ canvasContext: ctx, viewport: rvp }).promise;
+        const rn = realPageNum(tab, n);
         canvas.toBlob(blob => {
-            dlBlob(blob, `${tab.shortName}_pag_${String(n).padStart(3,'0')}.png`);
-            toast(`✓ Página ${n} baixada como imagem!`);
+            dlBlob(blob, `${tab.shortName} pag ${rn}.png`);
+            toast(`✓ Página ${rn} baixada como imagem!`);
         }, 'image/png');
     } catch (err) { toast('Erro ao gerar imagem.'); console.error(err); }
 }
@@ -1700,7 +1706,7 @@ async function downloadZIP() {
             const doc = await PDFLib.PDFDocument.create();
             const [pg] = await doc.copyPages(tab.pdfLibDoc, [n-1]);
             doc.addPage(pg);
-            zip.file(`${tab.shortName}_pag_${String(n).padStart(3,'0')}.pdf`, await doc.save());
+            zip.file(`${tab.shortName} pag ${realPageNum(tab, n)}.pdf`, await doc.save());
             setProgress(5 + ((i+1)/pages.length)*85);
             loaderText.textContent = `Página ${i+1} de ${pages.length}...`;
         }
@@ -1990,6 +1996,7 @@ async function performCrop(rx, ry, rw, rh) {
         fileName: tab.fileName,
         shortName:tab.shortName,
         page:     n,
+        realPage: realPageNum(tab, n),
         w: srcW, h: srcH
     });
     toast('✂ Recorte adicionado à galeria!');
@@ -2038,7 +2045,7 @@ function updateGalleryBadge() {
 function galSave(item) {
     const a = document.createElement('a');
     a.href     = item.dataURL;
-    a.download = `${item.shortName}_pag${item.page}_recorte_${item.id.slice(-6)}.png`;
+    a.download = `${item.shortName} recorte pag ${item.realPage ?? item.page}.png`;
     a.click();
 }
 
