@@ -815,6 +815,131 @@
             image-rendering: -webkit-optimize-contrast;
         }
 
+        /* ── Catalog Integration ── */
+        #cat-wrap { position: relative; flex-shrink: 0; }
+
+        #cat-trigger {
+            display: flex; align-items: center; gap: 0.4rem;
+            padding: 0.38rem 0.8rem;
+            border-radius: 9px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-2);
+            cursor: pointer; font-size: 0.78rem; font-weight: 600;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        #cat-trigger svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; flex-shrink: 0; }
+        #cat-trigger:hover { border-color: rgba(124,58,237,0.45); color: #c4b5fd; background: var(--sel-bg); }
+        #cat-trigger.connected { border-color: rgba(22,163,74,0.4); color: #4ade80; background: rgba(22,163,74,0.07); }
+        #cat-trigger.connected:hover { background: rgba(22,163,74,0.14); }
+
+        #cat-panel {
+            position: absolute; top: calc(100% + 8px); right: 0;
+            width: 320px;
+            background: var(--bg-2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+            z-index: 500;
+            display: none;
+            animation: zmPanelIn 0.18s ease;
+            overflow: hidden;
+        }
+        #cat-panel.open { display: block; }
+
+        .cp-head {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.65rem 1rem;
+            background: rgba(0,0,0,0.25);
+            border-bottom: 1px solid var(--border);
+        }
+        .cp-title { flex: 1; font-size: 0.8rem; font-weight: 700; color: var(--text); }
+        .cp-close {
+            width: 24px; height: 24px; border-radius: 6px;
+            border: 1px solid var(--border); background: transparent; color: var(--text-3);
+            cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+        }
+        .cp-close svg { width: 10px; height: 10px; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; fill: none; }
+        .cp-close:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
+
+        .cp-row {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .cp-row:last-child { border-bottom: none; }
+        .cp-label { font-size: 0.7rem; color: var(--text-3); width: 72px; flex-shrink: 0; }
+        .cp-val { flex: 1; font-size: 0.76rem; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .cp-select {
+            flex: 1;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text);
+            font-size: 0.74rem;
+            padding: 0.3rem 0.5rem;
+            cursor: pointer; outline: none; transition: border-color 0.2s;
+        }
+        .cp-select:focus { border-color: var(--border-a); }
+        .cp-select:disabled { opacity: 0.35; cursor: not-allowed; }
+        .cp-select option { background: #111120; }
+
+        .cp-btn {
+            padding: 0.28rem 0.6rem;
+            border-radius: 6px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-3);
+            font-size: 0.7rem; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+        }
+        .cp-btn:hover { border-color: rgba(255,255,255,0.14); color: var(--text-2); background: rgba(255,255,255,0.05); }
+        .cp-btn.primary { border-color: rgba(124,58,237,0.4); color: #c4b5fd; }
+        .cp-btn.primary:hover { background: rgba(124,58,237,0.12); }
+        .cp-btn.danger:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
+
+        .cp-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; transition: all 0.25s; }
+        .cp-dot.on  { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.6); }
+        .cp-dot.mid { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.6); }
+
+        /* ─ Marked (already handled) ─ */
+        .card-mark-stripe {
+            position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            border-radius: var(--radius) var(--radius) 0 0;
+            opacity: 0; transition: opacity 0.25s; z-index: 4; pointer-events: none;
+        }
+        .page-card.marked .card-mark-stripe { opacity: 1; }
+
+        .card-mark-dot {
+            display: none; width: 17px; height: 17px; border-radius: 50%;
+            background: #16a34a; align-items: center; justify-content: center;
+            flex-shrink: 0; cursor: pointer;
+            transition: background 0.15s, transform 0.15s;
+            box-shadow: 0 0 8px rgba(34,197,94,0.35);
+        }
+        .page-card.marked .card-mark-dot { display: flex; }
+        .card-mark-dot:hover { background: #ef4444; transform: scale(1.18); box-shadow: 0 0 8px rgba(239,68,68,0.35); }
+        .card-mark-dot svg { width: 8px; height: 8px; stroke: white; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+
+        /* ─ Grid view modes ─ */
+        .pages-grid.grid-2col { grid-template-columns: repeat(2, minmax(0, 220px)); justify-content: center; }
+
+        .btn-view {
+            width: 30px; height: 30px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-3);
+            cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .btn-view svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
+        .btn-view:hover { border-color: rgba(255,255,255,0.12); color: var(--text-2); background: rgba(255,255,255,0.04); }
+        .btn-view.active { border-color: var(--border-a); color: #c4b5fd; background: var(--sel-bg); }
+
+        /* ─ Drag reorder ─ */
+        .page-card.dragging { opacity: 0.25; border-style: dashed !important; transform: scale(0.96) !important; box-shadow: none !important; }
+        .page-card.drag-target { border-color: var(--a1) !important; box-shadow: 0 0 0 2px rgba(124,58,237,0.3), 0 10px 40px rgba(0,0,0,0.5) !important; background: var(--sel-bg) !important; transform: scale(1.03) translateY(-2px); }
+
         /* ─ Responsive ─ */
         @media (max-width: 640px) {
             .pages-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
@@ -884,6 +1009,39 @@
             <div class="hf-name" id="hf-name">—</div>
             <div class="hf-meta" id="hf-meta">—</div>
         </div>
+        <!-- Catalog Integration Trigger -->
+        <div id="cat-wrap">
+            <button id="cat-trigger" title="Conectar ao Catálogo Digital CSM">
+                <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span id="cat-trigger-label">Catálogo</span>
+            </button>
+            <div id="cat-panel">
+                <div class="cp-head">
+                    <div class="cp-dot" id="cp-dot"></div>
+                    <span class="cp-title">Catálogo Digital CSM</span>
+                    <button class="cp-close" id="cp-close">
+                        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <div class="cp-row">
+                    <span class="cp-label">Pasta raiz</span>
+                    <span class="cp-val" id="cp-root-val">—</span>
+                    <button class="cp-btn primary" id="cp-connect-btn">Conectar</button>
+                </div>
+                <div class="cp-row">
+                    <span class="cp-label">Catálogo</span>
+                    <select class="cp-select" id="cp-cat-select" disabled>
+                        <option value="">— selecione —</option>
+                    </select>
+                </div>
+                <div class="cp-row" id="cp-status-row" style="display:none">
+                    <span class="cp-label">Status</span>
+                    <span class="cp-val" id="cp-status-val">—</span>
+                    <button class="cp-btn danger" id="cp-disconnect-btn">Desconectar</button>
+                </div>
+            </div>
+        </div>
+
         <button id="gallery-btn" title="Galeria de recortes">
             <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
             Galeria
@@ -910,6 +1068,16 @@
             <button class="btn-ctrl" id="btn-even">Pares</button>
         </div>
         <span class="ctrl-hint"><kbd>Shift</kbd> + clique para intervalo</span>
+        <div style="display:flex;gap:0.3rem;flex-shrink:0;margin-left:auto">
+            <button class="btn-view" id="btn-view-auto" title="Grade automática" style="width:auto;padding:0 0.55rem;gap:0.3rem;font-size:0.73rem;font-weight:600;">
+                <svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+                Auto
+            </button>
+            <button class="btn-view" id="btn-view-2col" title="2 colunas" style="width:auto;padding:0 0.55rem;gap:0.3rem;font-size:0.73rem;font-weight:600;">
+                <svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="14" rx="1"/><rect x="9" y="1" width="6" height="14" rx="1"/></svg>
+                2 col
+            </button>
+        </div>
     </div>
 
     <!-- Pages Grid -->
@@ -1082,6 +1250,7 @@ async function dbSaveTab(tab) {
             selected:    [...tab.selected],
             lastIdx:     tab.lastIdx,
             order:       tabs.indexOf(tab),
+            pageOrder:   tab.pageOrder ?? null,
             isSubgroup:  !!tab.isSubgroup,
             parentPages: tab.parentPages ?? null,
             parentTabId: tab.parentTabId ?? null
@@ -1178,6 +1347,37 @@ function lsDeleteSelection(tabId) {
     try { localStorage.removeItem(`csmsel_${tabId}`); } catch {}
 }
 
+// Handled (marked) pages — localStorage only (small data, no IDB needed)
+function lsSaveHandled(tab) {
+    try { localStorage.setItem(`csmhand_${tab.id}`, JSON.stringify([...tab.handled])); } catch {}
+}
+function lsLoadHandled(tabId) {
+    try { const v = localStorage.getItem(`csmhand_${tabId}`); return v ? new Set(JSON.parse(v)) : new Set(); } catch { return new Set(); }
+}
+function lsDeleteHandled(tabId) {
+    try { localStorage.removeItem(`csmhand_${tabId}`); } catch {}
+}
+
+function markPage(tab, n) {
+    if (!tab.handled) tab.handled = new Set();
+    tab.handled.add(n);
+    lsSaveHandled(tab);
+    if (activeTabId === tab.id) {
+        const card = pagesGrid.querySelector(`[data-page="${n}"]`);
+        if (card) card.classList.add('marked');
+    }
+}
+
+function unmarkPage(tab, n) {
+    if (!tab.handled) return;
+    tab.handled.delete(n);
+    lsSaveHandled(tab);
+    if (activeTabId === tab.id) {
+        const card = pagesGrid.querySelector(`[data-page="${n}"]`);
+        if (card) card.classList.remove('marked');
+    }
+}
+
 // Debounced IndexedDB save (for order/lastIdx) — localStorage handles the critical selection part
 let _saveTimer = {};
 function scheduleTabSave(tab) {
@@ -1219,6 +1419,8 @@ async function restoreState() {
                 selected:    new Set(lsSel ?? s.selected),
                 lastIdx:     s.lastIdx,
                 thumbs:      cachedThumbs,
+                pageOrder:   s.pageOrder ?? Array.from({length: pdfJsDoc.numPages}, (_, i) => i + 1),
+                handled:     lsLoadHandled(s.id),
                 isSubgroup:  !!s.isSubgroup,
                 parentPages: s.parentPages ?? null,
                 parentTabId: s.parentTabId ?? null
@@ -1259,6 +1461,21 @@ const workerReady = (async () => {
 // ── State ──
 let tabs       = [];
 let activeTabId = null;
+let dragSrcPage = null;
+
+// ── Grid view mode ──
+const _gridViewKey = 'csm-grid-view';
+let gridView = localStorage.getItem(_gridViewKey) || 'auto'; // 'auto' | '2col'
+
+function applyGridView() {
+    pagesGrid.classList.toggle('grid-2col', gridView === '2col');
+    document.getElementById('btn-view-auto').classList.toggle('active', gridView === 'auto');
+    document.getElementById('btn-view-2col').classList.toggle('active', gridView === '2col');
+    localStorage.setItem(_gridViewKey, gridView);
+}
+
+document.getElementById('btn-view-auto').addEventListener('click', () => { gridView = 'auto'; applyGridView(); });
+document.getElementById('btn-view-2col').addEventListener('click', () => { gridView = '2col'; applyGridView(); });
 
 function getTab(id) { return tabs.find(t => t.id === (id ?? activeTabId)); }
 function activeTab() { return getTab(activeTabId); }
@@ -1349,7 +1566,9 @@ async function handleFile(file) {
             totalPages: pdfJsDoc.numPages,
             selected:   new Set(),
             lastIdx:    null,
-            thumbs:     {}   // pageNum → dataURL cache
+            thumbs:     {},  // pageNum → dataURL cache
+            pageOrder:  Array.from({length: pdfJsDoc.numPages}, (_, i) => i + 1),
+            handled:    new Set()
         };
 
         tabs.push(tab);
@@ -1392,6 +1611,7 @@ function closeTab(id) {
     dbDeleteTab(id);       // remove PDF bytes from IndexedDB
     dbDeleteThumbs(id);    // remove thumbnails from IndexedDB
     lsDeleteSelection(id); // remove selection from localStorage
+    lsDeleteHandled(id);   // remove marks from localStorage
 
     if (tabs.length === 0) {
         appScreen.style.display = 'none';
@@ -1437,20 +1657,21 @@ function syncTabBar() {
 // ── Grid ──
 function buildGrid(tab) {
     pagesGrid.innerHTML = '';
-    for (let i = 1; i <= tab.totalPages; i++) {
-        const card = makeCard(tab, i);
-        card.style.animationDelay = `${Math.min((i-1)*0.03, 0.5)}s`;
+    tab.pageOrder.forEach((pageNum, i) => {
+        const card = makeCard(tab, pageNum);
+        card.style.animationDelay = `${Math.min(i * 0.03, 0.5)}s`;
         pagesGrid.appendChild(card);
-    }
+    });
     renderThumbs(tab);
 }
 
 function makeCard(tab, n) {
     const card = document.createElement('div');
-    card.className = 'page-card' + (tab.selected.has(n) ? ' selected' : '');
+    card.className = 'page-card' + (tab.selected.has(n) ? ' selected' : '') + (tab.handled?.has(n) ? ' marked' : '');
     card.dataset.page = n;
 
     card.innerHTML = `
+        <div class="card-mark-stripe"></div>
         ${tab.thumbs[n]
             ? `<img class="card-thumb" src="${tab.thumbs[n]}" alt="Página ${n}">`
             : `<div class="card-loading"><div class="spinner-sm"></div></div>`}
@@ -1469,7 +1690,10 @@ function makeCard(tab, n) {
             <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         </button>
         <div class="card-footer">
-            <span class="card-num">PÁG ${n}</span>
+            <span class="card-num">PÁG ${realPageNum(tab, n)}</span>
+            <div class="card-mark-dot" title="Marcado — clique para desmarcar">
+                <svg viewBox="0 0 10 10"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
+            </div>
             <div class="card-checkbox">
                 <svg viewBox="0 0 11 11"><polyline points="1.5,5.5 4,8.5 9.5,2.5"/></svg>
             </div>
@@ -1477,8 +1701,12 @@ function makeCard(tab, n) {
         <div class="card-overlay"></div>`;
 
     card.addEventListener('click', e => {
-        if (e.target.closest('.card-dl-btn') || e.target.closest('.card-img-dl-btn') || e.target.closest('.card-expand-btn') || e.target.closest('.card-crop-btn')) return;
+        if (e.target.closest('.card-dl-btn') || e.target.closest('.card-img-dl-btn') || e.target.closest('.card-expand-btn') || e.target.closest('.card-crop-btn') || e.target.closest('.card-mark-dot')) return;
         onCardClick(e, tab, n);
+    });
+    card.querySelector('.card-mark-dot').addEventListener('click', e => {
+        e.stopPropagation();
+        unmarkPage(tab, n);
     });
     card.querySelector('.card-expand-btn').addEventListener('click', e => {
         e.stopPropagation();
@@ -1499,6 +1727,66 @@ function makeCard(tab, n) {
     card.addEventListener('dblclick', e => {
         if (e.target.closest('.card-dl-btn') || e.target.closest('.card-img-dl-btn') || e.target.closest('.card-expand-btn') || e.target.closest('.card-crop-btn')) return;
         openZoom(tab, n);
+    });
+
+    // ── Drag-to-swap ──
+    card.setAttribute('draggable', 'true');
+
+    card.addEventListener('dragstart', e => {
+        dragSrcPage = n;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(n));
+        requestAnimationFrame(() => card.classList.add('dragging'));
+    });
+
+    card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        pagesGrid.querySelectorAll('.drag-target').forEach(c => c.classList.remove('drag-target'));
+        dragSrcPage = null;
+    });
+
+    card.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragSrcPage !== n) card.classList.add('drag-target');
+    });
+
+    card.addEventListener('dragleave', e => {
+        if (!card.contains(e.relatedTarget)) card.classList.remove('drag-target');
+    });
+
+    card.addEventListener('drop', e => {
+        e.preventDefault();
+        card.classList.remove('drag-target');
+        const fromPage = parseInt(e.dataTransfer.getData('text/plain'));
+        if (!fromPage || fromPage === n) return;
+
+        const order    = tab.pageOrder;
+        const fromIdx  = order.indexOf(fromPage);
+        const toIdx    = order.indexOf(n);
+        if (fromIdx === -1 || toIdx === -1) return;
+
+        // Swap in data model
+        [order[fromIdx], order[toIdx]] = [order[toIdx], order[fromIdx]];
+
+        // Swap DOM nodes (no full rebuild — no flash)
+        const fromCard = pagesGrid.querySelector(`[data-page="${fromPage}"]`);
+        const toCard   = card;
+        if (!fromCard || !toCard || fromCard === toCard) return;
+
+        const fromNext = fromCard.nextSibling;
+        const toNext   = toCard.nextSibling;
+        if (fromNext === toCard) {
+            pagesGrid.insertBefore(toCard, fromCard);
+        } else if (toNext === fromCard) {
+            pagesGrid.insertBefore(fromCard, toCard);
+        } else {
+            pagesGrid.insertBefore(fromCard, toNext);
+            pagesGrid.insertBefore(toCard, fromNext);
+        }
+
+        scheduleTabSave(tab);
+        toast(`✓ Pág. ${fromPage} ↔ Pág. ${n}`);
     });
 
     return card;
@@ -1621,6 +1909,8 @@ async function createSubgroup() {
             selected:    new Set(),
             lastIdx:     null,
             thumbs,
+            pageOrder:   Array.from({length: pdfJsDoc.numPages}, (_, i) => i + 1),
+            handled:     new Set(),
             isSubgroup:  true,
             parentPages: pages,
             parentTabId: tab.id
@@ -1651,6 +1941,7 @@ async function downloadSinglePage(tab, n) {
         const bytes = await doc.save();
         const rn = realPageNum(tab, n);
         dlBlob(new Blob([bytes], {type:'application/pdf'}), `${tab.shortName} pag ${rn}.pdf`);
+        markPage(tab, n);
         toast(`✓ Página ${rn} baixada!`);
     } catch (err) { toast('Erro ao baixar a página.'); console.error(err); }
 }
@@ -1670,10 +1961,23 @@ async function downloadPageAsImage(tab, n) {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         await page.render({ canvasContext: ctx, viewport: rvp }).promise;
         const rn = realPageNum(tab, n);
-        canvas.toBlob(blob => {
-            dlBlob(blob, `${tab.shortName} pag ${rn}.png`);
-            toast(`✓ Página ${rn} baixada como imagem!`);
-        }, 'image/png');
+
+        if (catImagesDirHandle) {
+            // ── Modo catálogo: salva direto na pasta do catálogo ──
+            const fileName = `pag ${rn}.png`;
+            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            await catWriteFile(fileName, blob);
+            markPage(tab, n);
+            toast(`✓ Salvo no catálogo: ${fileName}`);
+            catSync();
+        } else {
+            // ── Modo padrão: download no browser ──
+            canvas.toBlob(blob => {
+                dlBlob(blob, `${tab.shortName} pag ${rn}.png`);
+                markPage(tab, n);
+                toast(`✓ Página ${rn} baixada como imagem!`);
+            }, 'image/png');
+        }
     } catch (err) { toast('Erro ao gerar imagem.'); console.error(err); }
 }
 
@@ -1875,7 +2179,9 @@ function zmNavPage(delta) {
 
 function zmUpdateLabel() {
     if (!zm.tab) return;
-    zoomLblEl.textContent = `Pág ${zm.page} de ${zm.tab.totalPages}`;
+    const realPg = realPageNum(zm.tab, zm.page);
+    const label  = realPg !== zm.page ? `Pág ${realPg} (${zm.page}/${zm.tab.totalPages})` : `Pág ${zm.page} de ${zm.tab.totalPages}`;
+    zoomLblEl.textContent = label;
     zmPctEl.textContent   = Math.round(zm.zoom * 100) + '%';
 }
 
@@ -1999,6 +2305,7 @@ async function performCrop(rx, ry, rw, rh) {
         realPage: realPageNum(tab, n),
         w: srcW, h: srcH
     });
+    markPage(tab, n);
     toast('✂ Recorte adicionado à galeria!');
 }
 
@@ -2042,11 +2349,23 @@ function updateGalleryBadge() {
     galleryBtnEl.classList.toggle('has-items', galleryItems.length > 0);
 }
 
-function galSave(item) {
-    const a = document.createElement('a');
-    a.href     = item.dataURL;
-    a.download = `${item.shortName} recorte pag ${item.realPage ?? item.page}.png`;
-    a.click();
+async function galSave(item) {
+    const rp = item.realPage ?? item.page;
+    if (catImagesDirHandle) {
+        // ── Modo catálogo: salva recorte direto na pasta do catálogo ──
+        const fileName = `pag recorte ${rp}.png`;
+        const res = await fetch(item.dataURL);
+        const blob = await res.blob();
+        await catWriteFile(fileName, blob);
+        toast(`✓ Recorte salvo no catálogo: ${fileName}`);
+        catSync();
+    } else {
+        // ── Modo padrão: download no browser ──
+        const a = document.createElement('a');
+        a.href     = item.dataURL;
+        a.download = `${item.shortName} recorte pag ${rp}.png`;
+        a.click();
+    }
 }
 
 function galDiscard(id) {
@@ -2170,8 +2489,159 @@ function galLbApply() {
     galLbPct.textContent  = Math.round(galLb.zoom * 100) + '%';
 }
 
+// ══════════════════════════════════════════════════════════════
+// CATALOG INTEGRATION
+// Conecta o CSM Splitter ao Catálogo Digital CSM.
+// Ao salvar uma imagem ou recorte, escreve diretamente na pasta
+// correta do catálogo via File System Access API e dispara a
+// sincronização automática do banco de dados.
+// ══════════════════════════════════════════════════════════════
+
+const CAT_SYNC_URL = 'http://localhost:3000/api/sync-imagens';
+
+let catRootHandle     = null;   // DirectoryHandle → "catalogos separados"
+let catActiveHandle   = null;   // DirectoryHandle → catálogo selecionado
+let catActiveName     = null;   // string → ex: "ABV 2025"
+let catImagesDirHandle = null;  // DirectoryHandle → "imagens dos produtos"
+
+const catTriggerEl    = document.getElementById('cat-trigger');
+const catTriggerLabel = document.getElementById('cat-trigger-label');
+const catPanel        = document.getElementById('cat-panel');
+const cpDot           = document.getElementById('cp-dot');
+const cpRootVal       = document.getElementById('cp-root-val');
+const cpCatSelect     = document.getElementById('cp-cat-select');
+const cpStatusRow     = document.getElementById('cp-status-row');
+const cpStatusVal     = document.getElementById('cp-status-val');
+
+// ── Abrir / fechar painel ──────────────────────────────────────
+
+catTriggerEl.addEventListener('click', (e) => {
+    e.stopPropagation();
+    catPanel.classList.toggle('open');
+});
+document.getElementById('cp-close').addEventListener('click', () => catPanel.classList.remove('open'));
+document.addEventListener('click', (e) => {
+    if (!document.getElementById('cat-wrap').contains(e.target)) catPanel.classList.remove('open');
+});
+
+// ── Conectar pasta raiz ────────────────────────────────────────
+
+document.getElementById('cp-connect-btn').addEventListener('click', async () => {
+    if (!('showDirectoryPicker' in window)) {
+        toast('File System Access API não suportada neste browser. Use Chrome ou Edge.');
+        return;
+    }
+    try {
+        catRootHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        cpRootVal.textContent = catRootHandle.name;
+        await catLoadCatalogs();
+    } catch (e) {
+        if (e.name !== 'AbortError') toast('Erro ao conectar pasta: ' + e.message);
+    }
+});
+
+// ── Listar catálogos da pasta raiz ────────────────────────────
+
+async function catLoadCatalogs() {
+    if (!catRootHandle) return;
+    cpCatSelect.innerHTML = '<option value="">— selecione —</option>';
+    const entries = [];
+    for await (const [name, handle] of catRootHandle.entries()) {
+        if (handle.kind === 'directory') entries.push(name);
+    }
+    entries.sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        cpCatSelect.appendChild(opt);
+    });
+    cpCatSelect.disabled = false;
+    catUpdateUI();
+}
+
+// ── Selecionar catálogo ────────────────────────────────────────
+
+cpCatSelect.addEventListener('change', async () => {
+    const name = cpCatSelect.value;
+    if (!name || !catRootHandle) return;
+    try {
+        catActiveName     = name;
+        catActiveHandle   = await catRootHandle.getDirectoryHandle(name);
+        catImagesDirHandle = await catActiveHandle.getDirectoryHandle('imagens dos produtos', { create: true });
+        catUpdateUI();
+        toast(`✓ Catálogo conectado: ${name}`);
+        catPanel.classList.remove('open');
+    } catch (e) {
+        toast('Erro ao abrir catálogo: ' + e.message);
+    }
+});
+
+// ── Desconectar ────────────────────────────────────────────────
+
+document.getElementById('cp-disconnect-btn').addEventListener('click', () => {
+    catRootHandle = catActiveHandle = catImagesDirHandle = null;
+    catActiveName = null;
+    cpCatSelect.innerHTML = '<option value="">— selecione —</option>';
+    cpCatSelect.disabled = true;
+    cpRootVal.textContent = '—';
+    catUpdateUI();
+    toast('Catálogo desconectado.');
+});
+
+// ── Atualizar UI ───────────────────────────────────────────────
+
+function catUpdateUI() {
+    if (!catRootHandle) {
+        cpDot.className = 'cp-dot';
+        catTriggerEl.className = '';
+        catTriggerEl.title = 'Conectar ao Catálogo Digital CSM';
+        catTriggerLabel.textContent = 'Catálogo';
+        cpStatusRow.style.display = 'none';
+    } else if (!catActiveName) {
+        cpDot.className = 'cp-dot mid';
+        catTriggerEl.className = '';
+        catTriggerLabel.textContent = 'Selecionar...';
+        cpStatusRow.style.display = 'none';
+    } else {
+        cpDot.className = 'cp-dot on';
+        catTriggerEl.className = 'connected';
+        catTriggerEl.title = `Catálogo: ${catActiveName}`;
+        catTriggerLabel.textContent = catActiveName;
+        cpStatusVal.textContent = 'Conectado — salvar imagem sincroniza automaticamente';
+        cpStatusRow.style.display = '';
+    }
+}
+
+// ── Escrever arquivo na pasta do catálogo ─────────────────────
+
+async function catWriteFile(fileName, blob) {
+    if (!catImagesDirHandle) throw new Error('Catálogo não conectado');
+    const fileHandle = await catImagesDirHandle.getFileHandle(fileName, { create: true });
+    const writable   = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+}
+
+// ── Sincronizar banco de dados ────────────────────────────────
+
+async function catSync() {
+    if (!catActiveName) return;
+    try {
+        const res  = await fetch(CAT_SYNC_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ catalog: catActiveName }),
+        });
+        const data = await res.json();
+        if (data.updated > 0) toast(`✓ Banco atualizado — ${data.updated} produto(s)`);
+    } catch {
+        // Servidor pode não estar rodando — não interrompe o fluxo
+    }
+}
+
 // ── Init: restore previous session ──
 workerReady.then(restoreState);
+applyGridView();
 
 // ── Utils ──
 function fmtBytes(b) {
