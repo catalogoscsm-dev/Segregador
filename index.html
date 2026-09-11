@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSM Splitter — Separador de Páginas</title>
+    <title>CSM Splitter — Separador de Páginas e Imagens</title>
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -143,7 +143,7 @@
             font-size: 0.75rem; color: var(--text-3); font-weight: 600; letter-spacing: 0.05em;
         }
 
-        #file-input, #tab-file-input { display: none; }
+        #file-input, #tab-file-input, #tab-img-input { display: none; }
 
         /* ══ APP SCREEN ══ */
         #app-screen { display: none; flex-direction: column; min-height: 100vh; }
@@ -962,10 +962,10 @@
         </div>
         <span class="brand-name">CSM Splitter</span>
     </div>
-    <p class="brand-tagline">Separe, selecione e baixe páginas do seu PDF instantaneamente</p>
+    <p class="brand-tagline">Separe, selecione e baixe páginas de PDFs e imagens</p>
 
     <div class="drop-zone" id="drop-zone">
-        <input type="file" id="file-input" accept=".pdf">
+        <input type="file" id="file-input" accept=".pdf,image/*" multiple>
         <div class="dz-icon-wrap">
             <div class="dz-icon-bg">
                 <svg viewBox="0 0 48 48" fill="none">
@@ -981,11 +981,14 @@
                 </svg>
             </div>
         </div>
-        <p class="dz-title">Arraste seu PDF aqui</p>
+        <p class="dz-title">Arraste PDFs ou imagens aqui</p>
         <p class="dz-sub">ou <span class="dz-link" id="browse-link">clique para selecionar</span></p>
         <div class="dz-formats">
             <span class="dz-format-tag">PDF</span>
-            <span class="dz-format-tag">Até qualquer tamanho</span>
+            <span class="dz-format-tag">JPG</span>
+            <span class="dz-format-tag">PNG</span>
+            <span class="dz-format-tag">WEBP</span>
+            <span class="dz-format-tag">+ outros</span>
         </div>
     </div>
 </div>
@@ -1051,7 +1054,7 @@
 
     <!-- Tab Bar -->
     <div class="tab-bar" id="tab-bar">
-        <input type="file" id="tab-file-input" accept=".pdf">
+        <input type="file" id="tab-file-input" accept=".pdf,image/*" multiple>
     </div>
 
     <!-- Controls Bar -->
@@ -1243,17 +1246,22 @@ async function dbSaveTab(tab) {
     return new Promise((res, rej) => {
         const tx = db.transaction(ST_TABS, 'readwrite');
         tx.objectStore(ST_TABS).put({
-            id:          tab.id,
-            fileName:    tab.fileName,
-            fileSize:    tab.fileSize,
-            pdfBytes:    tab.pdfBytes,
-            selected:    [...tab.selected],
-            lastIdx:     tab.lastIdx,
-            order:       tabs.indexOf(tab),
-            pageOrder:   tab.pageOrder ?? null,
-            isSubgroup:  !!tab.isSubgroup,
-            parentPages: tab.parentPages ?? null,
-            parentTabId: tab.parentTabId ?? null
+            id:            tab.id,
+            fileName:      tab.fileName,
+            fileSize:      tab.fileSize,
+            pdfBytes:      tab.pdfBytes ?? null,
+            imageBytes:    tab.imageBytes ?? null,
+            imageMimeType: tab.imageMimeType ?? null,
+            isImage:       !!tab.isImage,
+            imageW:        tab.imageW ?? null,
+            imageH:        tab.imageH ?? null,
+            selected:      [...tab.selected],
+            lastIdx:       tab.lastIdx,
+            order:         tabs.indexOf(tab),
+            pageOrder:     tab.pageOrder ?? null,
+            isSubgroup:    !!tab.isSubgroup,
+            parentPages:   tab.parentPages ?? null,
+            parentTabId:   tab.parentTabId ?? null
         });
         tx.oncomplete = res;
         tx.onerror    = e => rej(e.target.error);
@@ -1400,6 +1408,42 @@ async function restoreState() {
         try {
             setProgress(5 + ((i / saved.length) * 85));
             loaderText.textContent = `Restaurando "${s.fileName}"…`;
+
+            if (s.isImage && s.imageBytes) {
+                const dataURL = await new Promise((res, rej) => {
+                    const blob   = new Blob([s.imageBytes], { type: s.imageMimeType || 'image/*' });
+                    const reader = new FileReader();
+                    reader.onload  = e => res(e.target.result);
+                    reader.onerror = rej;
+                    reader.readAsDataURL(blob);
+                });
+                const lsSel = lsLoadSelection(s.id);
+                tabs.push({
+                    id:            s.id,
+                    fileName:      s.fileName,
+                    shortName:     s.fileName.replace(/\.[^.]+$/, ''),
+                    fileSize:      s.fileSize,
+                    isImage:       true,
+                    imageMimeType: s.imageMimeType,
+                    imageBytes:    s.imageBytes,
+                    imageDataURL:  dataURL,
+                    imageW:        s.imageW,
+                    imageH:        s.imageH,
+                    pdfJsDoc:      null,
+                    pdfLibDoc:     null,
+                    pdfBytes:      null,
+                    totalPages:    1,
+                    selected:      new Set(lsSel ?? s.selected),
+                    lastIdx:       s.lastIdx,
+                    thumbs:        { 1: dataURL },
+                    thumbsHD:      { 1: { src: dataURL, w: s.imageW, h: s.imageH } },
+                    pageOrder:     [1],
+                    handled:       lsLoadHandled(s.id),
+                    isSubgroup:    false
+                });
+                continue;
+            }
+
             // PDF.js, pdf-lib e thumbs carregam em paralelo — eram sequenciais antes
             const [pdfJsDoc, pdfLibDoc, cachedThumbs] = await Promise.all([
                 pdfjsLib.getDocument({ data: s.pdfBytes.slice(0) }).promise,
@@ -1441,7 +1485,12 @@ async function restoreState() {
 
     hideLoader();
     activateTab(targetId);
-    toast(`✓ Sessão restaurada — ${tabs.length} PDF${tabs.length > 1 ? 's' : ''} recuperado${tabs.length > 1 ? 's' : ''}`);
+    const _pdfs = tabs.filter(t => !t.isImage).length;
+    const _imgs = tabs.filter(t => t.isImage).length;
+    const _parts = [];
+    if (_pdfs) _parts.push(`${_pdfs} PDF${_pdfs>1?'s':''}`);
+    if (_imgs) _parts.push(`${_imgs} imagem${_imgs>1?'ns':''}`);
+    toast(`✓ Sessão restaurada — ${_parts.join(' e ')} recuperado${tabs.length>1?'s':''}`);
 }
 
 // ── Worker init (blob fetch to bypass file:// restrictions) ──
@@ -1499,18 +1548,28 @@ const loaderBar    = document.getElementById('loader-bar');
 const toastEl      = document.getElementById('toast');
 
 // ── Upload events ──
+function isAcceptedFile(f) {
+    return f.type === 'application/pdf' || f.type.startsWith('image/');
+}
+
 document.getElementById('browse-link').addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
 dropZone.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-tabFileInput.addEventListener('change', e => { if (e.target.files[0]) { handleFile(e.target.files[0]); tabFileInput.value = ''; } });
+fileInput.addEventListener('change', e => {
+    [...e.target.files].forEach(f => { if (isAcceptedFile(f)) handleFile(f); });
+    e.target.value = '';
+});
+tabFileInput.addEventListener('change', e => {
+    [...e.target.files].forEach(f => { if (isAcceptedFile(f)) handleFile(f); });
+    tabFileInput.value = '';
+});
 
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 ['dragleave','dragend'].forEach(ev => dropZone.addEventListener(ev, () => dropZone.classList.remove('drag-over')));
 dropZone.addEventListener('drop', e => {
     e.preventDefault(); dropZone.classList.remove('drag-over');
-    const f = e.dataTransfer.files[0];
-    if (f?.type === 'application/pdf') handleFile(f);
-    else toast('Por favor, selecione um arquivo PDF válido.');
+    const files = [...e.dataTransfer.files].filter(isAcceptedFile);
+    if (!files.length) { toast('Por favor, use PDF ou imagem (JPG, PNG, WEBP…)'); return; }
+    files.forEach(handleFile);
 });
 
 // ── Controls ──
@@ -1545,6 +1604,11 @@ document.getElementById('btn-subgroup').addEventListener('click', createSubgroup
 
 // ── Load file → create tab ──
 async function handleFile(file) {
+    if (file.type.startsWith('image/')) return handleImageFile(file);
+    return handlePDFFile(file);
+}
+
+async function handlePDFFile(file) {
     showLoader('Carregando PDF...', 5);
     try {
         await workerReady;
@@ -1566,13 +1630,13 @@ async function handleFile(file) {
             totalPages: pdfJsDoc.numPages,
             selected:   new Set(),
             lastIdx:    null,
-            thumbs:     {},  // pageNum → dataURL cache
+            thumbs:     {},
             pageOrder:  Array.from({length: pdfJsDoc.numPages}, (_, i) => i + 1),
             handled:    new Set()
         };
 
         tabs.push(tab);
-        dbSaveTab(tab); // persist immediately
+        dbSaveTab(tab);
         hideLoader();
 
         uploadScreen.style.display    = 'none';
@@ -1589,6 +1653,67 @@ async function handleFile(file) {
     }
 }
 
+async function handleImageFile(file) {
+    showLoader('Carregando imagem...', 20);
+    try {
+        const imageBytes = await file.arrayBuffer();
+        const dataURL    = await new Promise((res, rej) => {
+            const reader = new FileReader();
+            reader.onload  = e => res(e.target.result);
+            reader.onerror = rej;
+            reader.readAsDataURL(file);
+        });
+        setProgress(55);
+
+        const { w, h } = await new Promise((res, rej) => {
+            const img   = new Image();
+            img.onload  = () => res({ w: img.naturalWidth, h: img.naturalHeight });
+            img.onerror = rej;
+            img.src     = dataURL;
+        });
+        setProgress(80);
+
+        const tab = {
+            id:            `t_${Date.now()}`,
+            fileName:      file.name,
+            shortName:     file.name.replace(/\.[^.]+$/, ''),
+            fileSize:      file.size,
+            isImage:       true,
+            imageMimeType: file.type,
+            imageBytes,
+            imageDataURL:  dataURL,
+            imageW:        w,
+            imageH:        h,
+            pdfJsDoc:      null,
+            pdfLibDoc:     null,
+            pdfBytes:      null,
+            totalPages:    1,
+            selected:      new Set(),
+            lastIdx:       null,
+            thumbs:        { 1: dataURL },
+            thumbsHD:      { 1: { src: dataURL, w, h } },
+            pageOrder:     [1],
+            handled:       new Set()
+        };
+
+        tabs.push(tab);
+        dbSaveTab(tab);
+        hideLoader();
+
+        uploadScreen.style.display    = 'none';
+        appScreen.style.display       = 'flex';
+        appScreen.style.flexDirection = 'column';
+
+        activateTab(tab.id);
+        toast(`✓ Imagem carregada: ${file.name}`);
+
+    } catch (err) {
+        hideLoader();
+        toast('Erro ao carregar imagem: ' + (err?.message || ''));
+        console.error('[CSM Splitter]', err);
+    }
+}
+
 // ── Tab management ──
 function activateTab(id) {
     activeTabId = id;
@@ -1596,7 +1721,9 @@ function activateTab(id) {
     if (!t) return;
 
     hfName.textContent = t.fileName;
-    hfMeta.textContent = `${t.totalPages} página${t.totalPages!==1?'s':''} · ${fmtBytes(t.fileSize)}`;
+    hfMeta.textContent = t.isImage
+        ? `Imagem · ${t.imageW}×${t.imageH}px · ${fmtBytes(t.fileSize)}`
+        : `${t.totalPages} página${t.totalPages!==1?'s':''} · ${fmtBytes(t.fileSize)}`;
 
     dbSaveMeta('activeTabId', id); // remember which tab was open
     syncTabBar();
@@ -1648,7 +1775,7 @@ function syncTabBar() {
 
     const addBtn = document.createElement('button');
     addBtn.className = 'tab-add';
-    addBtn.title = 'Abrir outro PDF';
+    addBtn.title = 'Abrir PDF ou imagem';
     addBtn.innerHTML = `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
     addBtn.addEventListener('click', () => tabFileInput.click());
     tabBar.appendChild(addBtn);
@@ -1793,6 +1920,7 @@ function makeCard(tab, n) {
 }
 
 async function renderThumbs(tab) {
+    if (tab.isImage) return; // thumb already set as full dataURL
     const BATCH = 5;
     for (let i = 1; i <= tab.totalPages; i += BATCH) {
         const jobs = [];
@@ -1870,6 +1998,7 @@ function syncSelection(tab) {
 async function createSubgroup() {
     const tab = activeTab();
     if (!tab?.selected.size) return;
+    if (tab.isImage) { toast('Sub-grupos não estão disponíveis para imagens.'); return; }
 
     const pages = [...tab.selected].sort((a, b) => a - b);
     showLoader(`Criando sub-grupo com ${pages.length} página(s)...`, 10);
@@ -1928,12 +2057,53 @@ async function createSubgroup() {
     }
 }
 
+// ── Image → PDF helper ──
+async function imageTabToPDFBytes(tab) {
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    let embeddedImg;
+    if (tab.imageMimeType === 'image/jpeg') {
+        embeddedImg = await pdfDoc.embedJpg(tab.imageBytes);
+    } else if (tab.imageMimeType === 'image/png') {
+        embeddedImg = await pdfDoc.embedPng(tab.imageBytes);
+    } else {
+        // Convert via canvas → PNG for WebP, GIF, BMP, AVIF, etc.
+        const pngBlob = await new Promise(res => {
+            const img   = new Image();
+            img.onload  = () => {
+                const c = document.createElement('canvas');
+                c.width = img.naturalWidth; c.height = img.naturalHeight;
+                c.getContext('2d').drawImage(img, 0, 0);
+                c.toBlob(res, 'image/png');
+            };
+            img.src = tab.imageDataURL;
+        });
+        embeddedImg = await pdfDoc.embedPng(await pngBlob.arrayBuffer());
+    }
+    const { width, height } = embeddedImg;
+    const page = pdfDoc.addPage([width, height]);
+    page.drawImage(embeddedImg, { x: 0, y: 0, width, height });
+    return pdfDoc.save();
+}
+
+function imageExt(tab) {
+    return (tab.imageMimeType || '').split('/')[1]?.replace('jpeg','jpg') || 'jpg';
+}
+
 // ── Downloads ──
 function realPageNum(tab, n) {
     return (tab.parentPages ? tab.parentPages[n - 1] : n) ?? n;
 }
 
 async function downloadSinglePage(tab, n) {
+    if (tab.isImage) {
+        try {
+            const bytes = await imageTabToPDFBytes(tab);
+            dlBlob(new Blob([bytes], {type:'application/pdf'}), `${tab.shortName}.pdf`);
+            markPage(tab, n);
+            toast('✓ Imagem exportada como PDF!');
+        } catch (err) { toast('Erro ao exportar PDF.'); console.error(err); }
+        return;
+    }
     try {
         const doc = await PDFLib.PDFDocument.create();
         const [pg] = await doc.copyPages(tab.pdfLibDoc, [n-1]);
@@ -1947,6 +2117,22 @@ async function downloadSinglePage(tab, n) {
 }
 
 async function downloadPageAsImage(tab, n) {
+    if (tab.isImage) {
+        const ext  = imageExt(tab);
+        const blob = new Blob([tab.imageBytes], { type: tab.imageMimeType });
+        if (catImagesDirHandle) {
+            const fileName = `pag 1.${ext}`;
+            await catWriteFile(fileName, blob).catch(() => {});
+            markPage(tab, n);
+            toast(`✓ Imagem salva no catálogo: ${fileName}`);
+            catSync();
+        } else {
+            dlBlob(blob, `${tab.shortName}.${ext}`);
+            markPage(tab, n);
+            toast('✓ Imagem baixada!');
+        }
+        return;
+    }
     try {
         toast('Renderizando imagem...');
         const page  = await tab.pdfJsDoc.getPage(n);
@@ -1963,7 +2149,6 @@ async function downloadPageAsImage(tab, n) {
         const rn = realPageNum(tab, n);
 
         if (catImagesDirHandle) {
-            // ── Modo catálogo: salva direto na pasta do catálogo ──
             const fileName = `pag ${rn}.png`;
             const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
             await catWriteFile(fileName, blob);
@@ -1971,7 +2156,6 @@ async function downloadPageAsImage(tab, n) {
             toast(`✓ Salvo no catálogo: ${fileName}`);
             catSync();
         } else {
-            // ── Modo padrão: download no browser ──
             canvas.toBlob(blob => {
                 dlBlob(blob, `${tab.shortName} pag ${rn}.png`);
                 markPage(tab, n);
@@ -1984,6 +2168,18 @@ async function downloadPageAsImage(tab, n) {
 async function downloadPDF() {
     const tab = activeTab();
     if (!tab?.selected.size) return;
+
+    if (tab.isImage) {
+        showLoader('Exportando imagem como PDF...', 20);
+        try {
+            const bytes = await imageTabToPDFBytes(tab);
+            dlBlob(new Blob([bytes], {type:'application/pdf'}), `${tab.shortName}.pdf`);
+            hideLoader();
+            toast('✓ Imagem exportada como PDF!');
+        } catch (err) { hideLoader(); toast('Erro ao exportar PDF.'); console.error(err); }
+        return;
+    }
+
     showLoader('Gerando PDF...', 20);
     try {
         const out   = await PDFLib.PDFDocument.create();
@@ -2001,6 +2197,14 @@ async function downloadPDF() {
 async function downloadZIP() {
     const tab = activeTab();
     if (!tab?.selected.size) return;
+
+    if (tab.isImage) {
+        const ext = imageExt(tab);
+        dlBlob(new Blob([tab.imageBytes], { type: tab.imageMimeType }), `${tab.shortName}.${ext}`);
+        toast('✓ Imagem baixada!');
+        return;
+    }
+
     const zip   = new JSZip();
     const pages = [...tab.selected].sort((a,b)=>a-b);
     showLoader(`Gerando ${pages.length} arquivos...`, 5);
@@ -2121,16 +2325,23 @@ function closeZoom() {
 async function loadZoomHD(tab, n) {
     if (!tab.thumbsHD) tab.thumbsHD = {};
     if (!tab.thumbsHD[n]) {
-        try {
-            const page  = await tab.pdfJsDoc.getPage(n);
-            const vp    = page.getViewport({ scale: 1 });
-            const scale = Math.min(3.5, 1800 / vp.width);
-            const rvp   = page.getViewport({ scale });
-            const canvas = document.createElement('canvas');
-            canvas.width = rvp.width; canvas.height = rvp.height;
-            await page.render({ canvasContext: canvas.getContext('2d'), viewport: rvp, background: 'white' }).promise;
-            tab.thumbsHD[n] = { src: canvas.toDataURL('image/jpeg', 0.92), w: rvp.width, h: rvp.height };
-        } catch { return; }
+        if (tab.isImage) {
+            const img = new Image();
+            img.src   = tab.imageDataURL;
+            await new Promise(r => { if (img.complete) r(); else img.onload = r; });
+            tab.thumbsHD[n] = { src: tab.imageDataURL, w: img.naturalWidth || tab.imageW, h: img.naturalHeight || tab.imageH };
+        } else {
+            try {
+                const page  = await tab.pdfJsDoc.getPage(n);
+                const vp    = page.getViewport({ scale: 1 });
+                const scale = Math.min(3.5, 1800 / vp.width);
+                const rvp   = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                canvas.width = rvp.width; canvas.height = rvp.height;
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: rvp, background: 'white' }).promise;
+                tab.thumbsHD[n] = { src: canvas.toDataURL('image/jpeg', 0.92), w: rvp.width, h: rvp.height };
+            } catch { return; }
+        }
     }
     zmSwapHD(tab, n);
 }
