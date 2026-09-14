@@ -912,11 +912,18 @@
             display: none; width: 17px; height: 17px; border-radius: 50%;
             background: #16a34a; align-items: center; justify-content: center;
             flex-shrink: 0; cursor: pointer;
-            transition: background 0.15s, transform 0.15s;
+            transition: background 0.15s, transform 0.15s, opacity 0.15s;
             box-shadow: 0 0 8px rgba(34,197,94,0.35);
         }
         .page-card.marked .card-mark-dot { display: flex; }
-        .card-mark-dot:hover { background: #ef4444; transform: scale(1.18); box-shadow: 0 0 8px rgba(239,68,68,0.35); }
+        .page-card:not(.marked):hover .card-mark-dot {
+            display: flex; background: rgba(255,255,255,0.15); box-shadow: none;
+            opacity: 0.55;
+        }
+        .page-card:not(.marked):hover .card-mark-dot:hover {
+            background: #16a34a; opacity: 1; box-shadow: 0 0 8px rgba(34,197,94,0.35); transform: scale(1.18);
+        }
+        .page-card.marked .card-mark-dot:hover { background: #ef4444; transform: scale(1.18); box-shadow: 0 0 8px rgba(239,68,68,0.35); }
         .card-mark-dot svg { width: 8px; height: 8px; stroke: white; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
 
         /* ─ Grid view modes ─ */
@@ -1372,7 +1379,11 @@ function markPage(tab, n) {
     lsSaveHandled(tab);
     if (activeTabId === tab.id) {
         const card = pagesGrid.querySelector(`[data-page="${n}"]`);
-        if (card) card.classList.add('marked');
+        if (card) {
+            card.classList.add('marked');
+            const dot = card.querySelector('.card-mark-dot');
+            if (dot) dot.title = 'Marcado — clique para desmarcar';
+        }
     }
 }
 
@@ -1382,7 +1393,11 @@ function unmarkPage(tab, n) {
     lsSaveHandled(tab);
     if (activeTabId === tab.id) {
         const card = pagesGrid.querySelector(`[data-page="${n}"]`);
-        if (card) card.classList.remove('marked');
+        if (card) {
+            card.classList.remove('marked');
+            const dot = card.querySelector('.card-mark-dot');
+            if (dot) dot.title = 'Clique para marcar como verificado';
+        }
     }
 }
 
@@ -1818,7 +1833,7 @@ function makeCard(tab, n) {
         </button>
         <div class="card-footer">
             <span class="card-num">PÁG ${realPageNum(tab, n)}</span>
-            <div class="card-mark-dot" title="Marcado — clique para desmarcar">
+            <div class="card-mark-dot" title="${tab.handled?.has(n) ? 'Marcado — clique para desmarcar' : 'Clique para marcar como verificado'}">
                 <svg viewBox="0 0 10 10"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
             </div>
             <div class="card-checkbox">
@@ -1833,7 +1848,8 @@ function makeCard(tab, n) {
     });
     card.querySelector('.card-mark-dot').addEventListener('click', e => {
         e.stopPropagation();
-        unmarkPage(tab, n);
+        if (tab.handled?.has(n)) unmarkPage(tab, n);
+        else markPage(tab, n);
     });
     card.querySelector('.card-expand-btn').addEventListener('click', e => {
         e.stopPropagation();
