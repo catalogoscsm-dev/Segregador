@@ -570,6 +570,36 @@
         #zoom-modal.crop-mode #crop-canvas { display: block; }
         #zoom-modal.crop-mode #zoom-scroll { cursor: crosshair; }
 
+        /* ── Zoom Modal — erase mode ── */
+        #erase-canvas {
+            position: absolute; inset: 0;
+            border-radius: 2px;
+            pointer-events: none;
+            display: block;
+        }
+        #zoom-modal.erase-mode #erase-canvas { pointer-events: auto; cursor: none; }
+        #zoom-modal.erase-mode #zoom-scroll { cursor: none; }
+        #zm-eraser { margin-left: 0.25rem; }
+        #zm-eraser.active { border-color: #ef4444 !important; color: #f87171 !important; background: rgba(239,68,68,0.12) !important; }
+        .zm-eraser-ctrl { font-size: 0.72rem; color: var(--text-3); min-width: 22px; text-align: center; user-select: none; }
+
+        /* Eraser cursor indicator */
+        #erase-cursor {
+            position: fixed;
+            border-radius: 50%;
+            border: 1.5px dashed rgba(239,68,68,0.8);
+            pointer-events: none;
+            display: none;
+            transform: translate(-50%, -50%);
+            z-index: 700;
+        }
+        #erase-cursor.visible { display: block; }
+
+        /* Rect erase mode */
+        #zm-eraser-rect.active { border-color: #ef4444 !important; color: #f87171 !important; background: rgba(239,68,68,0.12) !important; }
+        #zoom-modal.erase-rect-mode #crop-canvas { display: block; cursor: crosshair; }
+        #zoom-modal.erase-rect-mode #zoom-scroll { cursor: crosshair; }
+
         /* ── Gallery Modal ── */
         #gallery-modal {
             display: none; position: fixed; inset: 0; z-index: 700;
@@ -1200,6 +1230,18 @@
                 <button class="zm-btn" id="zm-scissors" title="Recortar área (C)">
                     <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
                 </button>
+                <button class="zm-btn" id="zm-eraser" title="Borracha — pincel (E)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.707 5.826l-3.535-3.533a1 1 0 0 0-1.414 0L2.929 15.293A1 1 0 0 0 2.636 16l.607 3.63a1 1 0 0 0 .987.807l3.63-.607a1 1 0 0 0 .535-.293L20.707 7.24a1 1 0 0 0 0-1.414z"/><line x1="2" y1="22" x2="22" y2="22"/></svg>
+                </button>
+                <button class="zm-btn" id="zm-eraser-rect" title="Borracha retangular (R)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="1"/><line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="3 2"/></svg>
+                </button>
+                <button class="zm-btn" id="zm-eraser-sm" title="Diminuir borracha" style="display:none">−</button>
+                <span class="zm-eraser-ctrl" id="zm-eraser-sz" style="display:none">M</span>
+                <button class="zm-btn" id="zm-eraser-lg" title="Aumentar borracha" style="display:none">+</button>
+                <button class="zm-btn" id="zm-eraser-undo" title="Desfazer traço (Ctrl+Z)" style="display:none">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+                </button>
             </div>
             <button id="zm-close">
                 <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1210,6 +1252,7 @@
             <div id="zoom-scroll">
                 <div id="zoom-img-box">
                     <img id="zoom-img" alt="">
+                    <canvas id="erase-canvas"></canvas>
                     <canvas id="crop-canvas"></canvas>
                 </div>
             </div>
@@ -2110,59 +2153,104 @@ function realPageNum(tab, n) {
     return (tab.parentPages ? tab.parentPages[n - 1] : n) ?? n;
 }
 
-async function downloadSinglePage(tab, n) {
-    if (tab.isImage) {
-        try {
-            const bytes = await imageTabToPDFBytes(tab);
-            dlBlob(new Blob([bytes], {type:'application/pdf'}), `${tab.shortName}.pdf`);
-            markPage(tab, n);
-            toast('✓ Imagem exportada como PDF!');
-        } catch (err) { toast('Erro ao exportar PDF.'); console.error(err); }
-        return;
+// ── Erase helpers ──
+function pageHasErase(tab, n) {
+    return !!(tab.eraseStrokes?.[n]?.some(s => s.length > 0));
+}
+
+function applyEraseToCanvas(ctx, tab, n, w, h) {
+    if (!tab.eraseStrokes?.[n]) return;
+    const maxDim = Math.max(w, h);
+    ctx.fillStyle = '#ffffff';
+    for (const session of tab.eraseStrokes[n]) {
+        for (const pt of session) {
+            if (pt.type === 'rect') {
+                ctx.fillRect(pt.x * w, pt.y * h, pt.w * w, pt.h * h);
+            } else {
+                ctx.beginPath();
+                ctx.arc(pt.x * w, pt.y * h, pt.r * maxDim, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
     }
+}
+
+async function renderErasedPageCanvas(tab, n) {
+    const canvas = document.createElement('canvas');
+    let ctx;
+    if (tab.isImage) {
+        const img = new Image();
+        img.src = tab.imageDataURL;
+        await new Promise(r => img.complete ? r() : (img.onload = r));
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+    } else {
+        const page  = await tab.pdfJsDoc.getPage(n);
+        const vp    = page.getViewport({ scale: 1 });
+        const scale = Math.min(3, 2480 / vp.width);
+        const rvp   = page.getViewport({ scale });
+        canvas.width = rvp.width; canvas.height = rvp.height;
+        ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport: rvp }).promise;
+    }
+    applyEraseToCanvas(ctx, tab, n, canvas.width, canvas.height);
+    return canvas;
+}
+
+async function addErasedPageToPDF(tab, n, pdfDoc) {
+    const canvas  = await renderErasedPageCanvas(tab, n);
+    const pngBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    const pngBytes = await pngBlob.arrayBuffer();
+    const embImg  = await pdfDoc.embedPng(pngBytes);
+    const pg      = pdfDoc.addPage([embImg.width, embImg.height]);
+    pg.drawImage(embImg, { x: 0, y: 0, width: embImg.width, height: embImg.height });
+}
+
+async function downloadSinglePage(tab, n) {
+    const rn = realPageNum(tab, n);
     try {
         const doc = await PDFLib.PDFDocument.create();
-        const [pg] = await doc.copyPages(tab.pdfLibDoc, [n-1]);
-        doc.addPage(pg);
+        if (pageHasErase(tab, n) || tab.isImage) {
+            await addErasedPageToPDF(tab, n, doc);
+        } else {
+            const [pg] = await doc.copyPages(tab.pdfLibDoc, [n-1]);
+            doc.addPage(pg);
+        }
         const bytes = await doc.save();
-        const rn = realPageNum(tab, n);
-        dlBlob(new Blob([bytes], {type:'application/pdf'}), `${tab.shortName} pag ${rn}.pdf`);
+        dlBlob(new Blob([bytes], {type:'application/pdf'}), `${tab.shortName}${tab.isImage ? '' : ` pag ${rn}`}.pdf`);
         markPage(tab, n);
-        toast(`✓ Página ${rn} baixada!`);
+        toast(tab.isImage ? '✓ Imagem exportada como PDF!' : `✓ Página ${rn} baixada!`);
     } catch (err) { toast('Erro ao baixar a página.'); console.error(err); }
 }
 
 async function downloadPageAsImage(tab, n) {
     if (tab.isImage) {
-        const ext  = imageExt(tab);
-        const blob = new Blob([tab.imageBytes], { type: tab.imageMimeType });
-        if (catImagesDirHandle) {
-            const fileName = `pag 1.${ext}`;
-            await catWriteFile(fileName, blob).catch(() => {});
-            markPage(tab, n);
-            toast(`✓ Imagem salva no catálogo: ${fileName}`);
-            catSync();
-        } else {
-            dlBlob(blob, `${tab.shortName}.${ext}`);
-            markPage(tab, n);
-            toast('✓ Imagem baixada!');
-        }
+        try {
+            toast('Renderizando imagem...');
+            const canvas = await renderErasedPageCanvas(tab, n);
+            const ext    = imageExt(tab);
+            const blob   = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            if (catImagesDirHandle) {
+                const fileName = `pag 1.${ext}`;
+                await catWriteFile(fileName, blob).catch(() => {});
+                markPage(tab, n);
+                toast(`✓ Imagem salva no catálogo: ${fileName}`);
+                catSync();
+            } else {
+                dlBlob(blob, `${tab.shortName}.png`);
+                markPage(tab, n);
+                toast('✓ Imagem baixada!');
+            }
+        } catch (err) { toast('Erro ao baixar imagem.'); console.error(err); }
         return;
     }
     try {
         toast('Renderizando imagem...');
-        const page  = await tab.pdfJsDoc.getPage(n);
-        const vp    = page.getViewport({ scale: 1 });
-        const scale = Math.min(3, 2480 / vp.width);
-        const rvp   = page.getViewport({ scale });
-        const canvas = document.createElement('canvas');
-        canvas.width  = rvp.width;
-        canvas.height = rvp.height;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvasContext: ctx, viewport: rvp }).promise;
-        const rn = realPageNum(tab, n);
+        const canvas = await renderErasedPageCanvas(tab, n);
+        const rn     = realPageNum(tab, n);
 
         if (catImagesDirHandle) {
             const fileName = `pag ${rn}.png`;
@@ -2185,24 +2273,22 @@ async function downloadPDF() {
     const tab = activeTab();
     if (!tab?.selected.size) return;
 
-    if (tab.isImage) {
-        showLoader('Exportando imagem como PDF...', 20);
-        try {
-            const bytes = await imageTabToPDFBytes(tab);
-            dlBlob(new Blob([bytes], {type:'application/pdf'}), `${tab.shortName}.pdf`);
-            hideLoader();
-            toast('✓ Imagem exportada como PDF!');
-        } catch (err) { hideLoader(); toast('Erro ao exportar PDF.'); console.error(err); }
-        return;
-    }
-
     showLoader('Gerando PDF...', 20);
     try {
         const out   = await PDFLib.PDFDocument.create();
-        const idxs  = [...tab.selected].sort((a,b)=>a-b).map(p=>p-1);
-        const pages = await out.copyPages(tab.pdfLibDoc, idxs);
-        pages.forEach(p => out.addPage(p));
-        setProgress(80);
+        const sorted = [...tab.selected].sort((a,b)=>a-b);
+        for (let i = 0; i < sorted.length; i++) {
+            const n = sorted[i];
+            if (pageHasErase(tab, n) || tab.isImage) {
+                loaderText.textContent = `Renderizando página ${i+1}…`;
+                await addErasedPageToPDF(tab, n, out);
+            } else {
+                const [pg] = await out.copyPages(tab.pdfLibDoc, [n-1]);
+                out.addPage(pg);
+            }
+            setProgress(20 + ((i+1)/sorted.length)*70);
+        }
+        setProgress(95);
         const bytes = await out.save();
         dlBlob(new Blob([bytes], {type:'application/pdf'}), `${tab.shortName}_selecionadas.pdf`);
         hideLoader();
@@ -2214,22 +2300,20 @@ async function downloadZIP() {
     const tab = activeTab();
     if (!tab?.selected.size) return;
 
-    if (tab.isImage) {
-        const ext = imageExt(tab);
-        dlBlob(new Blob([tab.imageBytes], { type: tab.imageMimeType }), `${tab.shortName}.${ext}`);
-        toast('✓ Imagem baixada!');
-        return;
-    }
-
     const zip   = new JSZip();
     const pages = [...tab.selected].sort((a,b)=>a-b);
     showLoader(`Gerando ${pages.length} arquivos...`, 5);
     try {
         for (let i=0; i<pages.length; i++) {
-            const n = pages[i];
+            const n   = pages[i];
             const doc = await PDFLib.PDFDocument.create();
-            const [pg] = await doc.copyPages(tab.pdfLibDoc, [n-1]);
-            doc.addPage(pg);
+            if (pageHasErase(tab, n) || tab.isImage) {
+                loaderText.textContent = `Renderizando página ${i+1}…`;
+                await addErasedPageToPDF(tab, n, doc);
+            } else {
+                const [pg] = await doc.copyPages(tab.pdfLibDoc, [n-1]);
+                doc.addPage(pg);
+            }
             zip.file(`${tab.shortName} pag ${realPageNum(tab, n)}.pdf`, await doc.save());
             setProgress(5 + ((i+1)/pages.length)*85);
             loaderText.textContent = `Página ${i+1} de ${pages.length}...`;
@@ -2269,8 +2353,21 @@ const zmPctEl    = document.getElementById('zm-pct');
 const zoomScroll = document.getElementById('zoom-scroll');
 const zmPrevBtn  = document.getElementById('zm-prev');
 const zmNextBtn  = document.getElementById('zm-next');
-const cropCanvas = document.getElementById('crop-canvas');
-const zmScissors = document.getElementById('zm-scissors');
+const cropCanvas    = document.getElementById('crop-canvas');
+const zmScissors    = document.getElementById('zm-scissors');
+const eraseCanvas   = document.getElementById('erase-canvas');
+const zmEraser      = document.getElementById('zm-eraser');
+const zmEraserRect  = document.getElementById('zm-eraser-rect');
+const zmEraserSm    = document.getElementById('zm-eraser-sm');
+const zmEraserLg    = document.getElementById('zm-eraser-lg');
+const zmEraserSz    = document.getElementById('zm-eraser-sz');
+const zmEraserUndo  = document.getElementById('zm-eraser-undo');
+const eraseCursorEl = document.getElementById('erase-cursor');
+
+const ERASE_SIZES  = [0.012, 0.025, 0.045, 0.075];
+const ERASE_LABELS = ['S', 'M', 'G', 'XG'];
+let eraserSzIdx = 1;
+let eraser = { painting: false, get size() { return ERASE_SIZES[eraserSzIdx]; } };
 
 let zm = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1 };
 
@@ -2284,31 +2381,45 @@ zmNextBtn.addEventListener('click', () => zmNavPage(1));
 zmScissors.addEventListener('click', toggleCropMode);
 
 zoomScroll.addEventListener('wheel', e => {
-    if (zoomModal.classList.contains('crop-mode')) return;
+    if (zoomModal.classList.contains('crop-mode'))      return;
+    if (zoomModal.classList.contains('erase-mode'))     return;
+    if (zoomModal.classList.contains('erase-rect-mode')) return;
     e.preventDefault();
     zoomStep(e.deltaY < 0 ? 1.15 : (1 / 1.15));
 }, { passive: false });
 
 document.addEventListener('keydown', e => {
     if (!zoomModal.classList.contains('open')) return;
+    const inErase = zoomModal.classList.contains('erase-mode') || zoomModal.classList.contains('erase-rect-mode');
     if (e.key === 'Escape') {
         if (zoomModal.classList.contains('crop-mode')) { exitCropMode(); return; }
+        if (inErase) { exitAllEraseModes(); return; }
         closeZoom(); return;
     }
     if (zoomModal.classList.contains('crop-mode')) return;
+    if (inErase) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undoErase(); }
+        if (e.key === 'e' || e.key === 'E') toggleEraseMode();
+        if (e.key === 'r' || e.key === 'R') { if (zoomModal.classList.contains('erase-rect-mode')) exitEraseRectMode(); else enterEraseRectMode(); }
+        return;
+    }
     if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   zmNavPage(-1);
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown')  zmNavPage(1);
     if (e.key === '+' || e.key === '=')                   zoomStep(1.25);
     if (e.key === '-')                                    zoomStep(1 / 1.25);
     if (e.key === '0')                                    zoomFit();
-    if (e.key === 'c' || e.key === 'C')                   toggleCropMode();
+    if (e.key === 'c' || e.key === 'C') toggleCropMode();
+    if (e.key === 'e' || e.key === 'E') toggleEraseMode();
+    if (e.key === 'r' || e.key === 'R') enterEraseRectMode();
 });
 
 async function openZoom(tab, n, startCrop = false) {
     zm.tab  = tab;
     zm.page = n;
-    zoomModal.classList.add('open');
+    // Reset modes BEFORE showing the modal so it never opens in a dirty state
     exitCropMode();
+    exitAllEraseModes();
+    zoomModal.classList.add('open');
     document.body.style.overflow = 'hidden';
 
     if (tab.thumbs[n]) {
@@ -2332,10 +2443,12 @@ async function openZoom(tab, n, startCrop = false) {
 }
 
 function closeZoom() {
-    exitCropMode();
+    // Remove 'open' first so the modal always closes even if cleanup throws
     zoomModal.classList.remove('open');
     document.body.style.overflow = '';
     zm.tab = null;
+    exitCropMode();
+    exitAllEraseModes();
 }
 
 async function loadZoomHD(tab, n) {
@@ -2422,6 +2535,11 @@ function syncCropCanvas() {
         cropCanvas.width  = w;
         cropCanvas.height = h;
     }
+    if (eraseCanvas.width !== w || eraseCanvas.height !== h) {
+        eraseCanvas.width  = w;
+        eraseCanvas.height = h;
+    }
+    redrawEraseCanvas();
 }
 
 function toggleCropMode() {
@@ -2430,6 +2548,7 @@ function toggleCropMode() {
 }
 
 function enterCropMode() {
+    exitAllEraseModes();
     syncCropCanvas();
     zoomModal.classList.add('crop-mode');
     zmScissors.classList.add('active');
@@ -2444,57 +2563,261 @@ function exitCropMode() {
 }
 
 cropCanvas.addEventListener('mousedown', e => {
-    if (!zoomModal.classList.contains('crop-mode')) return;
+    if (!zoomModal.classList.contains('crop-mode') && !zoomModal.classList.contains('erase-rect-mode')) return;
+    e.preventDefault();
+    const isErase = zoomModal.classList.contains('erase-rect-mode');
     const r = cropCanvas.getBoundingClientRect();
     crop.drawing = true;
     crop.x0 = e.clientX - r.left;
     crop.y0 = e.clientY - r.top;
-});
 
-cropCanvas.addEventListener('mousemove', e => {
-    if (!crop.drawing) return;
-    const r   = cropCanvas.getBoundingClientRect();
-    const x1  = e.clientX - r.left;
-    const y1  = e.clientY - r.top;
-    const ctx = cropCanvas.getContext('2d');
-    ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
-    const rx = Math.min(crop.x0, x1), ry = Math.min(crop.y0, y1);
-    const rw = Math.abs(x1 - crop.x0),  rh = Math.abs(y1 - crop.y0);
-    ctx.clearRect(rx, ry, rw, rh);
-    ctx.strokeStyle = '#7c3aed';
-    ctx.lineWidth   = 2;
-    ctx.setLineDash([5, 3]);
-    ctx.strokeRect(rx, ry, rw, rh);
-    // corner handles
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#c4b5fd';
-    [[rx,ry],[rx+rw,ry],[rx,ry+rh],[rx+rw,ry+rh]].forEach(([cx,cy]) => {
-        ctx.fillRect(cx-3, cy-3, 6, 6);
-    });
-});
-
-cropCanvas.addEventListener('mouseup', async e => {
-    if (!crop.drawing) return;
-    crop.drawing = false;
-    const r  = cropCanvas.getBoundingClientRect();
-    const x1 = e.clientX - r.left;
-    const y1 = e.clientY - r.top;
-    const rx = Math.min(crop.x0, x1), ry = Math.min(crop.y0, y1);
-    const rw = Math.abs(x1 - crop.x0),  rh = Math.abs(y1 - crop.y0);
-    if (rw < 6 || rh < 6) { exitCropMode(); return; }
-    await performCrop(rx, ry, rw, rh);
-    exitCropMode();
-});
-
-cropCanvas.addEventListener('mouseleave', e => {
-    if (crop.drawing) {
-        crop.drawing = false;
+    const drawSel = (x1, y1) => {
         const ctx = cropCanvas.getContext('2d');
         ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
-    }
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+        const rx = Math.min(crop.x0, x1), ry = Math.min(crop.y0, y1);
+        const rw = Math.abs(x1 - crop.x0), rh = Math.abs(y1 - crop.y0);
+        ctx.clearRect(rx, ry, rw, rh);
+        ctx.strokeStyle = isErase ? '#ef4444' : '#7c3aed';
+        ctx.lineWidth   = 2;
+        ctx.setLineDash([5, 3]);
+        ctx.strokeRect(rx, ry, rw, rh);
+        ctx.setLineDash([]);
+        ctx.fillStyle = isErase ? '#fca5a5' : '#c4b5fd';
+        [[rx,ry],[rx+rw,ry],[rx,ry+rh],[rx+rw,ry+rh]].forEach(([cx,cy]) => {
+            ctx.fillRect(cx-3, cy-3, 6, 6);
+        });
+    };
+
+    const onMove = (ev) => {
+        if (!crop.drawing) return;
+        const r2 = cropCanvas.getBoundingClientRect();
+        drawSel(ev.clientX - r2.left, ev.clientY - r2.top);
+    };
+
+    const onUp = async (ev) => {
+        if (!crop.drawing) return;
+        crop.drawing = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onUp);
+        const r2 = cropCanvas.getBoundingClientRect();
+        const x1 = ev.clientX - r2.left;
+        const y1 = ev.clientY - r2.top;
+        const rx = Math.min(crop.x0, x1), ry = Math.min(crop.y0, y1);
+        const rw = Math.abs(x1 - crop.x0), rh = Math.abs(y1 - crop.y0);
+        cropCanvas.getContext('2d').clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+        if (isErase) {
+            if (rw >= 6 && rh >= 6) performRectErase(rx, ry, rw, rh);
+        } else {
+            if (rw < 6 || rh < 6) { exitCropMode(); return; }
+            await performCrop(rx, ry, rw, rh);
+            exitCropMode();
+        }
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
 });
+
+// ── Eraser Mode ──
+function redrawEraseCanvas() {
+    const tab = zm.tab;
+    const n   = zm.page;
+    const ctx = eraseCanvas.getContext('2d');
+    ctx.clearRect(0, 0, eraseCanvas.width, eraseCanvas.height);
+    if (!tab?.eraseStrokes?.[n]?.length) return;
+    const w = eraseCanvas.width, h = eraseCanvas.height;
+    const maxDim = Math.max(w, h);
+    ctx.fillStyle = '#ffffff';
+    for (const session of tab.eraseStrokes[n]) {
+        for (const pt of session) {
+            if (pt.type === 'rect') {
+                ctx.fillRect(pt.x * w, pt.y * h, pt.w * w, pt.h * h);
+            } else {
+                ctx.beginPath();
+                ctx.arc(pt.x * w, pt.y * h, pt.r * maxDim, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+}
+
+function _syncEraseControls() {
+    try {
+        const isBrush = zoomModal.classList.contains('erase-mode');
+        const isRect  = zoomModal.classList.contains('erase-rect-mode');
+        const any     = isBrush || isRect;
+        if (zmEraser)     zmEraser.classList.toggle('active', isBrush);
+        if (zmEraserRect) zmEraserRect.classList.toggle('active', isRect);
+        if (zmEraserSm)   zmEraserSm.style.display   = isBrush ? '' : 'none';
+        if (zmEraserLg)   zmEraserLg.style.display   = isBrush ? '' : 'none';
+        if (zmEraserSz)   zmEraserSz.style.display   = isBrush ? '' : 'none';
+        if (zmEraserUndo) zmEraserUndo.style.display = any     ? '' : 'none';
+    } catch (e) { console.error('_syncEraseControls:', e); }
+}
+
+function exitAllEraseModes() {
+    try { eraser.painting = false; } catch (_) {}
+    try { if (eraseCursorEl) eraseCursorEl.classList.remove('visible'); } catch (_) {}
+    try { zoomModal.classList.remove('erase-mode'); } catch (_) {}
+    try { zoomModal.classList.remove('erase-rect-mode'); } catch (_) {}
+    _syncEraseControls();
+}
+
+function enterEraseMode() {
+    exitCropMode();
+    zoomModal.classList.remove('erase-rect-mode');
+    zoomModal.classList.add('erase-mode');
+    syncCropCanvas();
+    zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx];
+    _syncEraseControls();
+}
+
+function exitEraseMode() {
+    eraser.painting = false;
+    eraseCursorEl.classList.remove('visible');
+    zoomModal.classList.remove('erase-mode');
+    _syncEraseControls();
+}
+
+function toggleEraseMode() {
+    if (zoomModal.classList.contains('erase-mode')) exitEraseMode();
+    else enterEraseMode();
+}
+
+function enterEraseRectMode() {
+    exitCropMode();
+    eraser.painting = false;
+    eraseCursorEl.classList.remove('visible');
+    zoomModal.classList.remove('erase-mode');
+    zoomModal.classList.add('erase-rect-mode');
+    syncCropCanvas();
+    _syncEraseControls();
+}
+
+function exitEraseRectMode() {
+    zoomModal.classList.remove('erase-rect-mode');
+    _syncEraseControls();
+}
+
+function undoErase() {
+    const tab = zm.tab;
+    const n   = zm.page;
+    if (!tab?.eraseStrokes?.[n]?.length) return;
+    tab.eraseStrokes[n].pop();
+    redrawEraseCanvas();
+    toast('↩ Apagamento desfeito');
+}
+
+function performRectErase(rx, ry, rw, rh) {
+    const tab = zm.tab;
+    const n   = zm.page;
+    if (!tab) return;
+    if (!tab.eraseStrokes)    tab.eraseStrokes    = {};
+    if (!tab.eraseStrokes[n]) tab.eraseStrokes[n] = [];
+    const w = eraseCanvas.width, h = eraseCanvas.height;
+    tab.eraseStrokes[n].push([{ type: 'rect', x: rx/w, y: ry/h, w: rw/w, h: rh/h }]);
+    const ctx = eraseCanvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(rx, ry, rw, rh);
+    toast('◻ Área apagada!');
+}
+
+zmEraser.addEventListener('click', toggleEraseMode);
+zmEraserRect.addEventListener('click', () => {
+    if (zoomModal.classList.contains('erase-rect-mode')) exitEraseRectMode();
+    else enterEraseRectMode();
+});
+zmEraserUndo.addEventListener('click', undoErase);
+zmEraserSm.addEventListener('click', () => {
+    if (eraserSzIdx > 0) { eraserSzIdx--; zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx]; }
+});
+zmEraserLg.addEventListener('click', () => {
+    if (eraserSzIdx < ERASE_SIZES.length - 1) { eraserSzIdx++; zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx]; }
+});
+
+eraseCanvas.addEventListener('wheel', e => {
+    if (!zoomModal.classList.contains('erase-mode')) return;
+    e.preventDefault();
+    if (e.deltaY < 0 && eraserSzIdx < ERASE_SIZES.length - 1) eraserSzIdx++;
+    else if (e.deltaY > 0 && eraserSzIdx > 0) eraserSzIdx--;
+    zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx];
+}, { passive: false });
+
+eraseCanvas.addEventListener('mouseenter', () => {
+    if (zoomModal.classList.contains('erase-mode')) eraseCursorEl.classList.add('visible');
+});
+eraseCanvas.addEventListener('mouseleave', () => {
+    if (!eraser.painting) eraseCursorEl.classList.remove('visible');
+});
+
+eraseCanvas.addEventListener('mousemove', e => {
+    if (!zoomModal.classList.contains('erase-mode')) return;
+    const maxDim = Math.max(eraseCanvas.width, eraseCanvas.height);
+    const rad    = eraser.size * maxDim;
+    eraseCursorEl.style.left   = e.clientX + 'px';
+    eraseCursorEl.style.top    = e.clientY + 'px';
+    eraseCursorEl.style.width  = (rad * 2) + 'px';
+    eraseCursorEl.style.height = (rad * 2) + 'px';
+    eraseCursorEl.classList.add('visible');
+});
+
+eraseCanvas.addEventListener('mousedown', e => {
+    if (!zoomModal.classList.contains('erase-mode')) return;
+    e.preventDefault();
+    eraser.painting = true;
+    const tab = zm.tab;
+    const n   = zm.page;
+    if (!tab) return;
+    if (!tab.eraseStrokes)    tab.eraseStrokes    = {};
+    if (!tab.eraseStrokes[n]) tab.eraseStrokes[n] = [];
+    tab.eraseStrokes[n].push([]);
+
+    const r2 = eraseCanvas.getBoundingClientRect();
+    _erasePointAt(e.clientX - r2.left, e.clientY - r2.top);
+
+    // Global listeners so drag works even when mouse leaves the canvas
+    const onMove = (ev) => {
+        if (!eraser.painting) return;
+        const r3  = eraseCanvas.getBoundingClientRect();
+        const maxDim = Math.max(eraseCanvas.width, eraseCanvas.height);
+        const rad    = eraser.size * maxDim;
+        eraseCursorEl.style.left   = ev.clientX + 'px';
+        eraseCursorEl.style.top    = ev.clientY + 'px';
+        eraseCursorEl.style.width  = (rad * 2) + 'px';
+        eraseCursorEl.style.height = (rad * 2) + 'px';
+        // Clamp to canvas bounds so drag always draws, even near edges
+        const px = Math.max(0, Math.min(eraseCanvas.width,  ev.clientX - r3.left));
+        const py = Math.max(0, Math.min(eraseCanvas.height, ev.clientY - r3.top));
+        _erasePointAt(px, py);
+    };
+    const onUp = () => {
+        eraser.painting = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+});
+
+function _erasePointAt(x, y) {
+    const tab = zm.tab;
+    const n   = zm.page;
+    if (!tab?.eraseStrokes?.[n]?.length) return;
+    const w   = eraseCanvas.width;
+    const h   = eraseCanvas.height;
+    const maxDim = Math.max(w, h);
+    const rad = eraser.size * maxDim;
+    const ctx = eraseCanvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x, y, rad, 0, Math.PI * 2);
+    ctx.fill();
+    tab.eraseStrokes[n][tab.eraseStrokes[n].length - 1].push({
+        x: x / w, y: y / h, r: eraser.size
+    });
+}
 
 async function performCrop(rx, ry, rw, rh) {
     const tab = zm.tab;
@@ -2877,5 +3200,6 @@ function fmtBytes(b) {
     return (b/1048576).toFixed(1) + ' MB';
 }
 </script>
+<div id="erase-cursor"></div>
 </body>
 </html>
