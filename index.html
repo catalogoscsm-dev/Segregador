@@ -585,6 +585,9 @@
 
         /* Eraser cursor — gerado via JS como SVG data URL no canvas */
 
+        #zm-eraser-undo { margin-left: 0.5rem; border-color: rgba(251,191,36,0.5) !important; color: #fbbf24 !important; }
+        #zm-eraser-undo:hover { background: rgba(251,191,36,0.15) !important; border-color: #fbbf24 !important; }
+
         /* Rect erase mode */
         #zm-eraser-rect.active { border-color: #ef4444 !important; color: #f87171 !important; background: rgba(239,68,68,0.12) !important; }
         #zoom-modal.erase-rect-mode #crop-canvas { display: block; cursor: crosshair; }
@@ -1229,8 +1232,9 @@
                 <button class="zm-btn" id="zm-eraser-sm" title="Diminuir borracha" style="display:none">−</button>
                 <span class="zm-eraser-ctrl" id="zm-eraser-sz" style="display:none">M</span>
                 <button class="zm-btn" id="zm-eraser-lg" title="Aumentar borracha" style="display:none">+</button>
-                <button class="zm-btn" id="zm-eraser-undo" title="Desfazer traço (Ctrl+Z)" style="display:none">
+                <button class="zm-btn" id="zm-eraser-undo" title="Desfazer apagamento (Ctrl+Z)" style="display:none">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+                    <span style="font-size:0.65rem;margin-left:2px;opacity:0.75">Z</span>
                 </button>
             </div>
             <button id="zm-close">
@@ -2403,9 +2407,9 @@ document.addEventListener('keydown', e => {
         if (inErase) { exitAllEraseModes(); return; }
         closeZoom(); return;
     }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undoErase(); return; }
     if (zoomModal.classList.contains('crop-mode')) return;
     if (inErase) {
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undoErase(); }
         if (e.key === 'e' || e.key === 'E') toggleEraseMode();
         if (e.key === 'r' || e.key === 'R') { if (zoomModal.classList.contains('erase-rect-mode')) exitEraseRectMode(); else enterEraseRectMode(); }
         return;
@@ -2652,15 +2656,16 @@ function redrawEraseCanvas() {
 
 function _syncEraseControls() {
     try {
-        const isBrush = zoomModal.classList.contains('erase-mode');
-        const isRect  = zoomModal.classList.contains('erase-rect-mode');
-        const any     = isBrush || isRect;
+        const isBrush   = zoomModal.classList.contains('erase-mode');
+        const isRect    = zoomModal.classList.contains('erase-rect-mode');
+        const any       = isBrush || isRect;
+        const hasStrokes = !!(zm.tab?.eraseStrokes?.[zm.page]?.length);
         if (zmEraser)     zmEraser.classList.toggle('active', isBrush);
         if (zmEraserRect) zmEraserRect.classList.toggle('active', isRect);
         if (zmEraserSm)   zmEraserSm.style.display   = isBrush ? '' : 'none';
         if (zmEraserLg)   zmEraserLg.style.display   = isBrush ? '' : 'none';
         if (zmEraserSz)   zmEraserSz.style.display   = isBrush ? '' : 'none';
-        if (zmEraserUndo) zmEraserUndo.style.display = any     ? '' : 'none';
+        if (zmEraserUndo) zmEraserUndo.style.display = (any || hasStrokes) ? '' : 'none';
     } catch (e) { console.error('_syncEraseControls:', e); }
 }
 
@@ -2709,9 +2714,10 @@ function exitEraseRectMode() {
 function undoErase() {
     const tab = zm.tab;
     const n   = zm.page;
-    if (!tab?.eraseStrokes?.[n]?.length) return;
+    if (!tab?.eraseStrokes?.[n]?.length) { toast('Nada para desfazer'); return; }
     tab.eraseStrokes[n].pop();
     redrawEraseCanvas();
+    _syncEraseControls();
     toast('↩ Apagamento desfeito');
 }
 
