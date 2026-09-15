@@ -583,17 +583,7 @@
         #zm-eraser.active { border-color: #ef4444 !important; color: #f87171 !important; background: rgba(239,68,68,0.12) !important; }
         .zm-eraser-ctrl { font-size: 0.72rem; color: var(--text-3); min-width: 22px; text-align: center; user-select: none; }
 
-        /* Eraser cursor indicator */
-        #erase-cursor {
-            position: fixed;
-            border-radius: 50%;
-            border: 1.5px dashed rgba(239,68,68,0.8);
-            pointer-events: none;
-            display: none;
-            transform: translate(-50%, -50%);
-            z-index: 700;
-        }
-        #erase-cursor.visible { display: block; }
+        /* Eraser cursor — gerado via JS como SVG data URL no canvas */
 
         /* Rect erase mode */
         #zm-eraser-rect.active { border-color: #ef4444 !important; color: #f87171 !important; background: rgba(239,68,68,0.12) !important; }
@@ -2362,12 +2352,29 @@ const zmEraserSm    = document.getElementById('zm-eraser-sm');
 const zmEraserLg    = document.getElementById('zm-eraser-lg');
 const zmEraserSz    = document.getElementById('zm-eraser-sz');
 const zmEraserUndo  = document.getElementById('zm-eraser-undo');
-const eraseCursorEl = document.getElementById('erase-cursor');
 
 const ERASE_SIZES  = [0.012, 0.025, 0.045, 0.075];
 const ERASE_LABELS = ['S', 'M', 'G', 'XG'];
 let eraserSzIdx = 1;
 let eraser = { painting: false, get size() { return ERASE_SIZES[eraserSzIdx]; } };
+
+function applyEraseCursor() {
+    const maxDim = Math.max(eraseCanvas.width || 1, eraseCanvas.height || 1);
+    const rad    = eraser.size * maxDim;
+    const cap    = Math.min(rad, 60); // CSS cursor max ≈ 128px; cap radius at 60
+    const size   = Math.ceil(cap * 2) + 4;
+    const c      = size / 2;
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'>`
+              + `<circle cx='${c}' cy='${c}' r='${cap}' fill='none' stroke='rgba(239,68,68,0.85)' stroke-width='1.5' stroke-dasharray='3 2'/>`
+              + `<line x1='${c}' y1='${c-5}' x2='${c}' y2='${c+5}' stroke='rgba(239,68,68,0.85)' stroke-width='1'/>`
+              + `<line x1='${c-5}' y1='${c}' x2='${c+5}' y2='${c}' stroke='rgba(239,68,68,0.85)' stroke-width='1'/>`
+              + `</svg>`;
+    eraseCanvas.style.cursor = `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${c} ${c}, crosshair`;
+}
+
+function updateEraseCursorSize() {
+    if (zoomModal.classList.contains('erase-mode')) applyEraseCursor();
+}
 
 let zm = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1 };
 
@@ -2659,7 +2666,6 @@ function _syncEraseControls() {
 
 function exitAllEraseModes() {
     try { eraser.painting = false; } catch (_) {}
-    try { if (eraseCursorEl) eraseCursorEl.classList.remove('visible'); } catch (_) {}
     try { zoomModal.classList.remove('erase-mode'); } catch (_) {}
     try { zoomModal.classList.remove('erase-rect-mode'); } catch (_) {}
     _syncEraseControls();
@@ -2672,11 +2678,11 @@ function enterEraseMode() {
     syncCropCanvas();
     zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx];
     _syncEraseControls();
+    applyEraseCursor();
 }
 
 function exitEraseMode() {
     eraser.painting = false;
-    eraseCursorEl.classList.remove('visible');
     zoomModal.classList.remove('erase-mode');
     _syncEraseControls();
 }
@@ -2689,7 +2695,6 @@ function toggleEraseMode() {
 function enterEraseRectMode() {
     exitCropMode();
     eraser.painting = false;
-    eraseCursorEl.classList.remove('visible');
     zoomModal.classList.remove('erase-mode');
     zoomModal.classList.add('erase-rect-mode');
     syncCropCanvas();
@@ -2731,10 +2736,10 @@ zmEraserRect.addEventListener('click', () => {
 });
 zmEraserUndo.addEventListener('click', undoErase);
 zmEraserSm.addEventListener('click', () => {
-    if (eraserSzIdx > 0) { eraserSzIdx--; zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx]; }
+    if (eraserSzIdx > 0) { eraserSzIdx--; zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx]; updateEraseCursorSize(); }
 });
 zmEraserLg.addEventListener('click', () => {
-    if (eraserSzIdx < ERASE_SIZES.length - 1) { eraserSzIdx++; zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx]; }
+    if (eraserSzIdx < ERASE_SIZES.length - 1) { eraserSzIdx++; zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx]; updateEraseCursorSize(); }
 });
 
 eraseCanvas.addEventListener('wheel', e => {
@@ -2743,25 +2748,13 @@ eraseCanvas.addEventListener('wheel', e => {
     if (e.deltaY < 0 && eraserSzIdx < ERASE_SIZES.length - 1) eraserSzIdx++;
     else if (e.deltaY > 0 && eraserSzIdx > 0) eraserSzIdx--;
     zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx];
+    updateEraseCursorSize();
 }, { passive: false });
 
 eraseCanvas.addEventListener('mouseenter', () => {
-    if (zoomModal.classList.contains('erase-mode')) eraseCursorEl.classList.add('visible');
-});
-eraseCanvas.addEventListener('mouseleave', () => {
-    if (!eraser.painting) eraseCursorEl.classList.remove('visible');
+    if (zoomModal.classList.contains('erase-mode')) applyEraseCursor();
 });
 
-eraseCanvas.addEventListener('mousemove', e => {
-    if (!zoomModal.classList.contains('erase-mode')) return;
-    const maxDim = Math.max(eraseCanvas.width, eraseCanvas.height);
-    const rad    = eraser.size * maxDim;
-    eraseCursorEl.style.left   = e.clientX + 'px';
-    eraseCursorEl.style.top    = e.clientY + 'px';
-    eraseCursorEl.style.width  = (rad * 2) + 'px';
-    eraseCursorEl.style.height = (rad * 2) + 'px';
-    eraseCursorEl.classList.add('visible');
-});
 
 eraseCanvas.addEventListener('mousedown', e => {
     if (!zoomModal.classList.contains('erase-mode')) return;
@@ -2781,12 +2774,6 @@ eraseCanvas.addEventListener('mousedown', e => {
     const onMove = (ev) => {
         if (!eraser.painting) return;
         const r3  = eraseCanvas.getBoundingClientRect();
-        const maxDim = Math.max(eraseCanvas.width, eraseCanvas.height);
-        const rad    = eraser.size * maxDim;
-        eraseCursorEl.style.left   = ev.clientX + 'px';
-        eraseCursorEl.style.top    = ev.clientY + 'px';
-        eraseCursorEl.style.width  = (rad * 2) + 'px';
-        eraseCursorEl.style.height = (rad * 2) + 'px';
         // Clamp to canvas bounds so drag always draws, even near edges
         const px = Math.max(0, Math.min(eraseCanvas.width,  ev.clientX - r3.left));
         const py = Math.max(0, Math.min(eraseCanvas.height, ev.clientY - r3.top));
@@ -3200,6 +3187,5 @@ function fmtBytes(b) {
     return (b/1048576).toFixed(1) + ' MB';
 }
 </script>
-<div id="erase-cursor"></div>
 </body>
 </html>
