@@ -494,6 +494,99 @@
         }
         .btn-dl-subgroup:hover { transform: translateY(-2px); box-shadow: 0 8px 35px rgba(8,145,178,0.5); }
 
+        .btn-dl-individual {
+            background: var(--bg-card); color: var(--text-2); border: 1px solid var(--border);
+        }
+        .btn-dl-individual:hover { border-color: rgba(255,255,255,0.14); color: var(--text); background: var(--bg-card-h); transform: translateY(-1px); }
+
+        .btn-dl-distrib {
+            background: linear-gradient(135deg, #065f46, #059669);
+            color: white; box-shadow: 0 4px 20px rgba(5,150,105,0.35);
+        }
+        .btn-dl-distrib:hover { transform: translateY(-2px); box-shadow: 0 8px 35px rgba(5,150,105,0.5); }
+
+        /* ── Distribuição Modal ── */
+        #distrib-modal {
+            display: none; position: fixed; inset: 0; z-index: 800;
+            background: rgba(7,7,14,0.72); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center;
+        }
+        #distrib-modal.open { display: flex; }
+        .distrib-box {
+            background: var(--bg-2); border: 1px solid var(--border);
+            border-radius: 16px; width: 440px; max-width: 96vw;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.6); overflow: hidden;
+        }
+        .distrib-head {
+            display: flex; align-items: center; padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border); background: var(--bg-card);
+        }
+        .distrib-head-title { font-weight: 700; font-size: 0.95rem; flex: 1; }
+        .distrib-head-close {
+            background: none; border: none; cursor: pointer; color: var(--text-2);
+            width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+            border-radius: 6px; padding: 0;
+        }
+        .distrib-head-close:hover { background: var(--bg-card-h); color: var(--text); }
+        .distrib-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.8rem; }
+        .distrib-row { display: flex; align-items: center; gap: 0.6rem; }
+        .distrib-label { font-size: 0.8rem; color: var(--text-2); min-width: 80px; }
+        .distrib-val {
+            flex: 1; font-size: 0.82rem; color: var(--text); font-weight: 600;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .distrib-input {
+            flex: 1; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text); padding: 0.35rem 0.6rem;
+            font-size: 0.82rem; outline: none; font-family: inherit;
+        }
+        .distrib-input:focus { border-color: var(--a1); }
+        .distrib-fmt-row { display: flex; gap: 0.35rem; }
+        .distrib-fmt {
+            padding: 0.28rem 0.7rem; border: 1px solid var(--border);
+            border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-weight: 600;
+            background: var(--bg-card); color: var(--text-2); font-family: inherit;
+        }
+        .distrib-fmt.active { border-color: var(--a1); color: #a78bfa; background: rgba(124,58,237,0.1); }
+        .distrib-fmt:hover:not(.active) { border-color: rgba(255,255,255,0.14); color: var(--text); }
+        .distrib-sep { height: 1px; background: var(--border); }
+        .distrib-preview-head {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.78rem; color: var(--text-2); margin-bottom: 0.45rem;
+        }
+        .distrib-preview-list {
+            max-height: 180px; overflow-y: auto; border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.35rem;
+            display: flex; flex-direction: column; gap: 1px;
+            scrollbar-width: thin;
+        }
+        .distrib-preview-item {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.22rem 0.4rem; border-radius: 5px; font-size: 0.79rem;
+        }
+        .distrib-preview-item:nth-child(even) { background: var(--bg-card); }
+        .distrib-prev-page { min-width: 55px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+        .distrib-prev-arrow { color: #555; }
+        .distrib-prev-folder { color: #4ade80; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .distrib-prev-warn { font-size: 0.78rem; color: #fb923c; padding: 0.25rem 0.4rem; }
+        .distrib-actions {
+            display: flex; gap: 0.5rem; padding: 0.9rem 1.25rem;
+            border-top: 1px solid var(--border); background: var(--bg-card);
+            justify-content: flex-end;
+        }
+        .distrib-btn {
+            padding: 0.52rem 1.1rem; border-radius: 8px; font-size: 0.82rem;
+            font-weight: 600; cursor: pointer; border: none; font-family: inherit;
+        }
+        .distrib-btn-cancel { background: var(--bg); border: 1px solid var(--border); color: var(--text-2); }
+        .distrib-btn-cancel:hover { color: var(--text); border-color: rgba(255,255,255,0.14); }
+        .distrib-btn-exec {
+            background: linear-gradient(135deg, #065f46, #059669);
+            color: white; box-shadow: 0 4px 14px rgba(5,150,105,0.35);
+        }
+        .distrib-btn-exec:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(5,150,105,0.5); }
+        .distrib-btn-exec:disabled { opacity: 0.4; cursor: not-allowed; }
+
         /* Sub-group tab indicator */
         .tab-item.subgroup .tab-dot { background: var(--a3); box-shadow: 0 0 6px var(--glow2); }
         .tab-item.subgroup.active .tab-dot { background: var(--a3); box-shadow: 0 0 8px rgba(6,182,212,0.6); }
@@ -1135,7 +1228,21 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                ZIP individual
+                ZIP
+            </button>
+            <button class="btn-dl btn-dl-individual" id="btn-individual" title="Baixar cada página como arquivo individual, sequencialmente">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    <line x1="5" y1="3" x2="5" y2="9"/><line x1="3" y1="7" x2="5" y2="9"/><line x1="7" y1="7" x2="5" y2="9"/>
+                </svg>
+                Individual
+            </button>
+            <button class="btn-dl btn-dl-distrib" id="btn-distrib" title="Distribuir páginas em subpastas numeradas">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    <polyline points="12,12 12,18"/><polyline points="9,15 12,18 15,15"/>
+                </svg>
+                Distribuir
             </button>
             <button class="btn-dl btn-dl-pdf" id="btn-pdf">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1266,19 +1373,21 @@
 // + selection state per tab so nothing is lost.
 // ══════════════════════════════════════════════════════════════
 const DB_NAME    = 'csm-splitter-v1';
-const DB_VER     = 2;
+const DB_VER     = 3;
 const ST_TABS    = 'tabs';
 const ST_META    = 'meta';
 const ST_THUMBS  = 'thumbs';
+const ST_DISTRIB = 'distrib';
 
 function openDB() {
     return new Promise((res, rej) => {
         const req = indexedDB.open(DB_NAME, DB_VER);
         req.onupgradeneeded = e => {
             const db = e.target.result;
-            if (!db.objectStoreNames.contains(ST_TABS))   db.createObjectStore(ST_TABS,   { keyPath: 'id' });
-            if (!db.objectStoreNames.contains(ST_META))   db.createObjectStore(ST_META);
-            if (!db.objectStoreNames.contains(ST_THUMBS)) db.createObjectStore(ST_THUMBS);
+            if (!db.objectStoreNames.contains(ST_TABS))    db.createObjectStore(ST_TABS,    { keyPath: 'id' });
+            if (!db.objectStoreNames.contains(ST_META))    db.createObjectStore(ST_META);
+            if (!db.objectStoreNames.contains(ST_THUMBS))  db.createObjectStore(ST_THUMBS);
+            if (!db.objectStoreNames.contains(ST_DISTRIB)) db.createObjectStore(ST_DISTRIB);
         };
         req.onsuccess = e => res(e.target.result);
         req.onerror   = e => rej(e.target.error);
@@ -1653,6 +1762,13 @@ document.getElementById('btn-even').addEventListener('click', () => {
 document.getElementById('btn-pdf').addEventListener('click', downloadPDF);
 document.getElementById('btn-zip').addEventListener('click', downloadZIP);
 document.getElementById('btn-subgroup').addEventListener('click', createSubgroup);
+document.getElementById('btn-individual').addEventListener('click', downloadIndividual);
+document.getElementById('btn-distrib').addEventListener('click', () => {
+    const tab = activeTab();
+    if (!tab?.selected.size) { toast('Selecione páginas primeiro.'); return; }
+    renderDistribPreview();
+    document.getElementById('distrib-modal').classList.add('open');
+});
 
 // ── Load file → create tab ──
 async function handleFile(file) {
@@ -2324,6 +2440,216 @@ function dlBlob(blob, name) {
     const a = Object.assign(document.createElement('a'), {href: url, download: name});
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ── Download Individual Sequencial ──
+async function downloadIndividual() {
+    const tab = activeTab();
+    if (!tab?.selected.size) return;
+
+    const pages = [...tab.selected].sort((a, b) => a - b);
+    showLoader(`Baixando ${pages.length} arquivo(s)...`, 5);
+    try {
+        for (let i = 0; i < pages.length; i++) {
+            const n = pages[i];
+            loaderText.textContent = `Arquivo ${i + 1} de ${pages.length}...`;
+            setProgress(5 + ((i + 1) / pages.length) * 90);
+            const canvas = await renderErasedPageCanvas(tab, n);
+            const rn = realPageNum(tab, n);
+            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            dlBlob(blob, `${tab.shortName} pag ${rn}.png`);
+            markPage(tab, n);
+            await new Promise(r => setTimeout(r, 350));
+        }
+        hideLoader();
+        toast(`✓ ${pages.length} imagem(ns) baixada(s) individualmente!`);
+    } catch (err) {
+        hideLoader(); toast('Erro ao baixar imagens.'); console.error(err);
+    }
+}
+
+// ── Distribuição em Subpastas ──────────────────────────────────
+let distribRootHandle = null;
+let distribSubfolders = [];
+let distribFormat = 'png';
+
+(function initDistribModal() {
+    const modal   = document.getElementById('distrib-modal');
+    const closeEl = document.getElementById('distrib-close');
+    const cancel  = document.getElementById('distrib-cancel');
+    const selBtn  = document.getElementById('distrib-select-btn');
+    const fmtPng  = document.getElementById('distrib-fmt-png');
+    const fmtPdf  = document.getElementById('distrib-fmt-pdf');
+    const execBtn = document.getElementById('distrib-execute');
+    const fnInput = document.getElementById('distrib-fname');
+
+    closeEl.addEventListener('click', () => modal.classList.remove('open'));
+    cancel.addEventListener('click',  () => modal.classList.remove('open'));
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
+
+    selBtn.addEventListener('click', async () => {
+        try {
+            const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            distribRootHandle = handle;
+            await saveDistribHandle(handle);
+            await refreshDistribSubfolders();
+            renderDistribPreview();
+        } catch (e) {
+            if (e.name !== 'AbortError') toast('Erro ao selecionar pasta.');
+        }
+    });
+
+    fmtPng.addEventListener('click', () => {
+        distribFormat = 'png';
+        fmtPng.classList.add('active'); fmtPdf.classList.remove('active');
+        renderDistribPreview();
+    });
+    fmtPdf.addEventListener('click', () => {
+        distribFormat = 'pdf';
+        fmtPdf.classList.add('active'); fmtPng.classList.remove('active');
+        renderDistribPreview();
+    });
+
+    fnInput.addEventListener('input', renderDistribPreview);
+    execBtn.addEventListener('click', executeDistrib);
+})();
+
+async function refreshDistribSubfolders() {
+    distribSubfolders = [];
+    for await (const [name, handle] of distribRootHandle) {
+        if (handle.kind === 'directory') distribSubfolders.push({ name, handle });
+    }
+    distribSubfolders.sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+    );
+}
+
+function renderDistribPreview() {
+    const tab = activeTab();
+    if (!tab) return;
+
+    const rootVal = document.getElementById('distrib-root-val');
+    const selBtn  = document.getElementById('distrib-select-btn');
+    const config  = document.getElementById('distrib-config');
+    const sep     = document.getElementById('distrib-sep');
+    const preview = document.getElementById('distrib-preview');
+    const execBtn = document.getElementById('distrib-execute');
+    const list    = document.getElementById('distrib-preview-list');
+    const summary = document.getElementById('distrib-preview-summary');
+    const fname   = document.getElementById('distrib-fname').value.trim() || 'foto';
+
+    rootVal.textContent = distribRootHandle ? distribRootHandle.name : 'Nenhuma pasta selecionada';
+    selBtn.textContent  = distribRootHandle ? 'Alterar' : 'Selecionar';
+
+    if (!distribRootHandle || distribSubfolders.length === 0) {
+        config.style.display = 'none';
+        sep.style.display    = 'none';
+        preview.style.display = 'none';
+        execBtn.disabled = true;
+        return;
+    }
+
+    config.style.display  = 'flex';
+    sep.style.display     = '';
+    preview.style.display = '';
+
+    const pages = [...tab.selected].sort((a, b) => a - b);
+    const mapped   = [];
+    const unmapped = [];
+    pages.forEach((p, i) => {
+        const folder = distribSubfolders[i];
+        (folder ? mapped : unmapped).push({ page: p, folder });
+    });
+
+    const ext = distribFormat;
+    list.innerHTML = mapped.map(({ page, folder }) =>
+        `<div class="distrib-preview-item">
+            <span class="distrib-prev-page">Pág. ${realPageNum(tab, page)}</span>
+            <span class="distrib-prev-arrow">→</span>
+            <span class="distrib-prev-folder" title="${folder.name} / ${fname}.${ext}">${folder.name} / ${fname}.${ext}</span>
+        </div>`
+    ).join('') + (unmapped.length
+        ? `<div class="distrib-prev-warn">⚠ ${unmapped.length} página(s) sem pasta correspondente (pastas insuficientes).</div>`
+        : '');
+
+    summary.textContent = `${mapped.length} de ${pages.length} página(s)`;
+    execBtn.disabled = mapped.length === 0;
+}
+
+async function executeDistrib() {
+    const tab = activeTab();
+    if (!tab?.selected.size) return;
+
+    const fname  = document.getElementById('distrib-fname').value.trim() || 'foto';
+    const pages  = [...tab.selected].sort((a, b) => a - b);
+    const tasks  = pages.map((p, i) => ({ page: p, folder: distribSubfolders[i] })).filter(t => t.folder);
+
+    document.getElementById('distrib-modal').classList.remove('open');
+    showLoader(`Distribuindo ${tasks.length} arquivo(s)...`, 5);
+
+    try {
+        for (let i = 0; i < tasks.length; i++) {
+            const { page, folder } = tasks[i];
+            loaderText.textContent = `Salvando ${i + 1} de ${tasks.length}...`;
+            setProgress(5 + ((i + 1) / tasks.length) * 88);
+
+            let blob;
+            if (distribFormat === 'pdf') {
+                const doc = await PDFLib.PDFDocument.create();
+                if (pageHasErase(tab, page) || tab.isImage) {
+                    await addErasedPageToPDF(tab, page, doc);
+                } else {
+                    const [pg] = await doc.copyPages(tab.pdfLibDoc, [page - 1]);
+                    doc.addPage(pg);
+                }
+                blob = new Blob([await doc.save()], { type: 'application/pdf' });
+            } else {
+                const canvas = await renderErasedPageCanvas(tab, page);
+                blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            }
+
+            const fileHandle = await folder.handle.getFileHandle(`${fname}.${distribFormat}`, { create: true });
+            const writable   = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            markPage(tab, page);
+        }
+        hideLoader();
+        toast(`✓ ${tasks.length} arquivo(s) distribuído(s)!`);
+    } catch (err) {
+        hideLoader();
+        if (err.name === 'NotAllowedError') toast('Permissão negada. Selecione a pasta novamente.');
+        else { toast('Erro ao distribuir arquivos.'); console.error(err); }
+    }
+}
+
+async function saveDistribHandle(handle) {
+    try {
+        const db = await openDB();
+        await new Promise((res, rej) => {
+            const tx = db.transaction(ST_DISTRIB, 'readwrite');
+            tx.objectStore(ST_DISTRIB).put(handle, 'root');
+            tx.oncomplete = res; tx.onerror = rej;
+        });
+    } catch (e) { /* non-critical */ }
+}
+
+async function restoreDistribHandle() {
+    try {
+        const db = await openDB();
+        const handle = await new Promise((res, rej) => {
+            const tx = db.transaction(ST_DISTRIB, 'readonly');
+            const req = tx.objectStore(ST_DISTRIB).get('root');
+            req.onsuccess = () => res(req.result);
+            req.onerror   = rej;
+        });
+        if (!handle) return;
+        const perm = await handle.queryPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+            distribRootHandle = handle;
+            await refreshDistribSubfolders();
+        }
+    } catch (e) { /* silently ignore */ }
 }
 
 // ── Loader ──
@@ -3185,6 +3511,7 @@ async function catSync() {
 // ── Init: restore previous session ──
 workerReady.then(restoreState);
 applyGridView();
+restoreDistribHandle();
 
 // ── Utils ──
 function fmtBytes(b) {
@@ -3193,5 +3520,49 @@ function fmtBytes(b) {
     return (b/1048576).toFixed(1) + ' MB';
 }
 </script>
+
+<!-- ── Distribuição em Subpastas Modal ── -->
+<div id="distrib-modal">
+    <div class="distrib-box">
+        <div class="distrib-head">
+            <span class="distrib-head-title">Distribuir em Subpastas</span>
+            <button class="distrib-head-close" id="distrib-close" title="Fechar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="distrib-body">
+            <div class="distrib-row">
+                <span class="distrib-label">Pasta raiz</span>
+                <span class="distrib-val" id="distrib-root-val">Nenhuma pasta selecionada</span>
+                <button class="cp-btn primary" id="distrib-select-btn">Selecionar</button>
+            </div>
+            <div id="distrib-config" style="display:none; flex-direction:column; gap:0.6rem;">
+                <div class="distrib-row">
+                    <span class="distrib-label">Nome do arquivo</span>
+                    <input class="distrib-input" id="distrib-fname" type="text" placeholder="foto" value="foto">
+                </div>
+                <div class="distrib-row">
+                    <span class="distrib-label">Formato</span>
+                    <div class="distrib-fmt-row">
+                        <button class="distrib-fmt active" id="distrib-fmt-png">PNG</button>
+                        <button class="distrib-fmt" id="distrib-fmt-pdf">PDF</button>
+                    </div>
+                </div>
+            </div>
+            <div class="distrib-sep" id="distrib-sep" style="display:none"></div>
+            <div id="distrib-preview" style="display:none">
+                <div class="distrib-preview-head">
+                    <span>Mapeamento de pastas</span>
+                    <span id="distrib-preview-summary"></span>
+                </div>
+                <div id="distrib-preview-list" class="distrib-preview-list"></div>
+            </div>
+        </div>
+        <div class="distrib-actions">
+            <button class="distrib-btn distrib-btn-cancel" id="distrib-cancel">Cancelar</button>
+            <button class="distrib-btn distrib-btn-exec" id="distrib-execute" disabled>Distribuir</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
