@@ -2658,7 +2658,7 @@ function setProgress(pct) { loaderBar.style.width = pct + '%'; }
 function hideLoader() { setProgress(100); setTimeout(() => loadingOv.classList.remove('show'), 400); }
 
 // ── Toast ──
-let toastTimer;
+var toastTimer;
 function toast(msg) {
     toastEl.textContent = msg; toastEl.classList.add('show');
     clearTimeout(toastTimer);
