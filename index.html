@@ -2294,17 +2294,37 @@ async function renderErasedPageCanvas(tab, n) {
         await new Promise(r => img.complete ? r() : (img.onload = r));
         canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
         ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Falha ao criar contexto canvas para imagem');
         ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
     } else {
         const page  = await tab.pdfJsDoc.getPage(n);
         const vp    = page.getViewport({ scale: 1 });
-        const scale = Math.min(3, 2480 / vp.width);
+        const scale = Math.min(3, 2480 / Math.max(vp.width, 1));
         const rvp   = page.getViewport({ scale });
         canvas.width = rvp.width; canvas.height = rvp.height;
         ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Falha ao criar contexto canvas');
         ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvasContext: ctx, viewport: rvp }).promise;
+        // Retry up to 3x to handle "Rendering is already in progress" race with thumbnail rendering
+        let lastErr;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                await page.render({ canvasContext: ctx, viewport: rvp }).promise;
+                lastErr = null;
+                break;
+            } catch (e) {
+                lastErr = e;
+                const msg = e?.message ?? '';
+                if (attempt < 2 && (msg.includes('Rendering') || e?.name === 'RenderingCancelledException')) {
+                    await new Promise(r => setTimeout(r, 300));
+                    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else {
+                    break;
+                }
+            }
+        }
+        if (lastErr) throw lastErr;
     }
     applyEraseToCanvas(ctx, tab, n, canvas.width, canvas.height);
     return canvas;
@@ -2343,6 +2363,7 @@ async function downloadPageAsImage(tab, n) {
             const canvas = await renderErasedPageCanvas(tab, n);
             const ext    = imageExt(tab);
             const blob   = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            if (!blob) throw new Error('canvas.toBlob retornou nulo');
             if (catImagesDirHandle) {
                 const fileName = `pag 1.${ext}`;
                 await catWriteFile(fileName, blob).catch(() => {});
@@ -2361,20 +2382,19 @@ async function downloadPageAsImage(tab, n) {
         toast('Renderizando imagem...');
         const canvas = await renderErasedPageCanvas(tab, n);
         const rn     = realPageNum(tab, n);
+        const blob   = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        if (!blob) throw new Error('canvas.toBlob retornou nulo — canvas pode estar corrompido ou vazio');
 
         if (catImagesDirHandle) {
             const fileName = `pag ${rn}.png`;
-            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
             await catWriteFile(fileName, blob);
             markPage(tab, n);
             toast(`✓ Salvo no catálogo: ${fileName}`);
             catSync();
         } else {
-            canvas.toBlob(blob => {
-                dlBlob(blob, `${tab.shortName} pag ${rn}.png`);
-                markPage(tab, n);
-                toast(`✓ Página ${rn} baixada como imagem!`);
-            }, 'image/png');
+            dlBlob(blob, `${tab.shortName} pag ${rn}.png`);
+            markPage(tab, n);
+            toast(`✓ Página ${rn} baixada como imagem!`);
         }
     } catch (err) { toast('Erro ao gerar imagem.'); console.error(err); }
 }
