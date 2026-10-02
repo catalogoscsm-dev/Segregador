@@ -1362,6 +1362,50 @@
     </div>
 </div>
 
+<!-- ── Distribuição em Subpastas Modal ── -->
+<div id="distrib-modal">
+    <div class="distrib-box">
+        <div class="distrib-head">
+            <span class="distrib-head-title">Distribuir em Subpastas</span>
+            <button class="distrib-head-close" id="distrib-close" title="Fechar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="distrib-body">
+            <div class="distrib-row">
+                <span class="distrib-label">Pasta raiz</span>
+                <span class="distrib-val" id="distrib-root-val">Nenhuma pasta selecionada</span>
+                <button class="cp-btn primary" id="distrib-select-btn">Selecionar</button>
+            </div>
+            <div id="distrib-config" style="display:none; flex-direction:column; gap:0.6rem;">
+                <div class="distrib-row">
+                    <span class="distrib-label">Nome do arquivo</span>
+                    <input class="distrib-input" id="distrib-fname" type="text" placeholder="foto" value="foto">
+                </div>
+                <div class="distrib-row">
+                    <span class="distrib-label">Formato</span>
+                    <div class="distrib-fmt-row">
+                        <button class="distrib-fmt active" id="distrib-fmt-png">PNG</button>
+                        <button class="distrib-fmt" id="distrib-fmt-pdf">PDF</button>
+                    </div>
+                </div>
+            </div>
+            <div class="distrib-sep" id="distrib-sep" style="display:none"></div>
+            <div id="distrib-preview" style="display:none">
+                <div class="distrib-preview-head">
+                    <span>Mapeamento de pastas</span>
+                    <span id="distrib-preview-summary"></span>
+                </div>
+                <div id="distrib-preview-list" class="distrib-preview-list"></div>
+            </div>
+        </div>
+        <div class="distrib-actions">
+            <button class="distrib-btn distrib-btn-cancel" id="distrib-cancel">Cancelar</button>
+            <button class="distrib-btn distrib-btn-exec" id="distrib-execute" disabled>Distribuir</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -2510,6 +2554,11 @@ async function downloadIndividual() {
     const execBtn = document.getElementById('distrib-execute');
     const fnInput = document.getElementById('distrib-fname');
 
+    if (!modal || !closeEl || !cancel || !selBtn || !fmtPng || !fmtPdf || !execBtn || !fnInput) {
+        console.warn('[initDistribModal] Um ou mais elementos do modal de distribuição não foram encontrados — funcionalidade desativada.');
+        return;
+    }
+
     closeEl.addEventListener('click', () => modal.classList.remove('open'));
     cancel.addEventListener('click',  () => modal.classList.remove('open'));
     modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
@@ -3537,48 +3586,5 @@ function fmtBytes(b) {
 }
 </script>
 
-<!-- ── Distribuição em Subpastas Modal ── -->
-<div id="distrib-modal">
-    <div class="distrib-box">
-        <div class="distrib-head">
-            <span class="distrib-head-title">Distribuir em Subpastas</span>
-            <button class="distrib-head-close" id="distrib-close" title="Fechar">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-        </div>
-        <div class="distrib-body">
-            <div class="distrib-row">
-                <span class="distrib-label">Pasta raiz</span>
-                <span class="distrib-val" id="distrib-root-val">Nenhuma pasta selecionada</span>
-                <button class="cp-btn primary" id="distrib-select-btn">Selecionar</button>
-            </div>
-            <div id="distrib-config" style="display:none; flex-direction:column; gap:0.6rem;">
-                <div class="distrib-row">
-                    <span class="distrib-label">Nome do arquivo</span>
-                    <input class="distrib-input" id="distrib-fname" type="text" placeholder="foto" value="foto">
-                </div>
-                <div class="distrib-row">
-                    <span class="distrib-label">Formato</span>
-                    <div class="distrib-fmt-row">
-                        <button class="distrib-fmt active" id="distrib-fmt-png">PNG</button>
-                        <button class="distrib-fmt" id="distrib-fmt-pdf">PDF</button>
-                    </div>
-                </div>
-            </div>
-            <div class="distrib-sep" id="distrib-sep" style="display:none"></div>
-            <div id="distrib-preview" style="display:none">
-                <div class="distrib-preview-head">
-                    <span>Mapeamento de pastas</span>
-                    <span id="distrib-preview-summary"></span>
-                </div>
-                <div id="distrib-preview-list" class="distrib-preview-list"></div>
-            </div>
-        </div>
-        <div class="distrib-actions">
-            <button class="distrib-btn distrib-btn-cancel" id="distrib-cancel">Cancelar</button>
-            <button class="distrib-btn distrib-btn-exec" id="distrib-execute" disabled>Distribuir</button>
-        </div>
-    </div>
-</div>
 </body>
 </html>
