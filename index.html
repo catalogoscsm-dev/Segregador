@@ -2771,6 +2771,7 @@ document.addEventListener('keydown', e => {
 });
 
 async function openZoom(tab, n, startCrop = false) {
+    try {
     zm.tab  = tab;
     zm.page = n;
     // Reset modes BEFORE showing the modal so it never opens in a dirty state
@@ -2797,6 +2798,7 @@ async function openZoom(tab, n, startCrop = false) {
     loadZoomHD(tab, n).then(() => {
         if (startCrop && zm.tab?.id === tab.id && zm.page === n) enterCropMode();
     });
+    } catch(e) { toast('Zoom erro: ' + (e?.message ?? e)); console.error('[openZoom]', e); }
 }
 
 function closeZoom() {
