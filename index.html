@@ -3388,10 +3388,10 @@ function galLbApply() {
 
 const CAT_SYNC_URL = 'http://localhost:3000/api/sync-imagens';
 
-let catRootHandle     = null;   // DirectoryHandle → "catalogos separados"
-let catActiveHandle   = null;   // DirectoryHandle → catálogo selecionado
-let catActiveName     = null;   // string → ex: "ABV 2025"
-let catImagesDirHandle = null;  // DirectoryHandle → "imagens dos produtos"
+var catRootHandle     = null;   // DirectoryHandle → "catalogos separados"
+var catActiveHandle   = null;   // DirectoryHandle → catálogo selecionado
+var catActiveName     = null;   // string → ex: "ABV 2025"
+var catImagesDirHandle = null;  // DirectoryHandle → "imagens dos produtos"
 
 const catTriggerEl    = document.getElementById('cat-trigger');
 const catTriggerLabel = document.getElementById('cat-trigger-label');
