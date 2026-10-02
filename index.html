@@ -1673,6 +1673,17 @@ var tabs       = [];
 var activeTabId = null;
 var dragSrcPage = null;
 
+// ── Zoom / crop / eraser state (declarados cedo para evitar TDZ) ──
+var zm         = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1 };
+var crop       = { drawing: false, x0: 0, y0: 0 };
+var eraserSzIdx = 1;
+var eraser     = { painting: false, get size() { return [0.012, 0.025, 0.045, 0.075][eraserSzIdx]; } };
+var galleryItems = [];
+var galLb      = { idx: 0, zoom: 1, naturalW: 1, naturalH: 1 };
+var distribRootHandle = null;
+var distribSubfolders = [];
+var distribFormat = 'png';
+
 // ── Grid view mode ──
 const _gridViewKey = 'csm-grid-view';
 var gridView = localStorage.getItem(_gridViewKey) || 'auto'; // 'auto' | '2col'
@@ -2489,10 +2500,6 @@ async function downloadIndividual() {
 }
 
 // ── Distribuição em Subpastas ──────────────────────────────────
-var distribRootHandle = null;
-var distribSubfolders = [];
-var distribFormat = 'png';
-
 (function initDistribModal() {
     const modal   = document.getElementById('distrib-modal');
     const closeEl = document.getElementById('distrib-close');
@@ -2705,9 +2712,6 @@ const zmEraserUndo  = document.getElementById('zm-eraser-undo');
 
 const ERASE_SIZES  = [0.012, 0.025, 0.045, 0.075];
 const ERASE_LABELS = ['S', 'M', 'G', 'XG'];
-var eraserSzIdx = 1;
-var eraser = { painting: false, get size() { return ERASE_SIZES[eraserSzIdx]; } };
-
 function applyEraseCursor() {
     const maxDim = Math.max(eraseCanvas.width || 1, eraseCanvas.height || 1);
     const rad    = eraser.size * maxDim;
@@ -2725,8 +2729,6 @@ function applyEraseCursor() {
 function updateEraseCursorSize() {
     if (zoomModal.classList.contains('erase-mode')) applyEraseCursor();
 }
-
-var zm = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1 };
 
 document.getElementById('zoom-backdrop').addEventListener('click', closeZoom);
 document.getElementById('zm-close').addEventListener('click', closeZoom);
@@ -2770,7 +2772,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'r' || e.key === 'R') enterEraseRectMode();
 });
 
-async function openZoom(tab, n, startCrop = false) { try {
+async function openZoom(tab, n, startCrop = false) {
     zm.tab  = tab;
     zm.page = n;
     // Reset modes BEFORE showing the modal so it never opens in a dirty state
@@ -2797,7 +2799,6 @@ async function openZoom(tab, n, startCrop = false) { try {
     loadZoomHD(tab, n).then(() => {
         if (startCrop && zm.tab?.id === tab.id && zm.page === n) enterCropMode();
     });
-    } catch(e) { toast('Zoom erro: ' + (e?.message ?? e)); console.error('[openZoom]', e); }
 }
 
 function closeZoom() {
@@ -2884,8 +2885,6 @@ function zmUpdateLabel() {
 }
 
 // ── Crop Mode ──
-var crop = { drawing: false, x0: 0, y0: 0 };
-
 function syncCropCanvas() {
     const w = parseInt(zoomImgEl.style.width)  || zoomImgEl.naturalWidth;
     const h = parseInt(zoomImgEl.style.height) || zoomImgEl.naturalHeight;
@@ -3200,8 +3199,6 @@ async function performCrop(rx, ry, rw, rh) {
 }
 
 // ── Gallery ──
-var galleryItems = [];
-
 const galleryModal  = document.getElementById('gallery-modal');
 const galleryGrid   = document.getElementById('gallery-grid');
 const galleryEmpty  = document.getElementById('gallery-empty');
@@ -3297,8 +3294,6 @@ const galLbPct     = document.getElementById('gal-lb-pct');
 const galLbScroll  = document.getElementById('gal-lb-scroll');
 const galLbPrevBtn = document.getElementById('gal-lb-prev');
 const galLbNextBtn = document.getElementById('gal-lb-next');
-
-var galLb = { idx: 0, zoom: 1, naturalW: 1, naturalH: 1 };
 
 document.getElementById('gal-lb-backdrop').addEventListener('click', galLbClose);
 document.getElementById('gal-lb-close').addEventListener('click', galLbClose);
