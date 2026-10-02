@@ -1548,7 +1548,7 @@ function unmarkPage(tab, n) {
 }
 
 // Debounced IndexedDB save (for order/lastIdx) — localStorage handles the critical selection part
-let _saveTimer = {};
+var _saveTimer = {};
 function scheduleTabSave(tab) {
     lsSaveSelection(tab); // sync, instant — never missed by F5
     clearTimeout(_saveTimer[tab.id]);
@@ -1669,13 +1669,13 @@ const workerReady = (async () => {
 })();
 
 // ── State ──
-let tabs       = [];
-let activeTabId = null;
-let dragSrcPage = null;
+var tabs       = [];
+var activeTabId = null;
+var dragSrcPage = null;
 
 // ── Grid view mode ──
 const _gridViewKey = 'csm-grid-view';
-let gridView = localStorage.getItem(_gridViewKey) || 'auto'; // 'auto' | '2col'
+var gridView = localStorage.getItem(_gridViewKey) || 'auto'; // 'auto' | '2col'
 
 function applyGridView() {
     pagesGrid.classList.toggle('grid-2col', gridView === '2col');
@@ -2489,9 +2489,9 @@ async function downloadIndividual() {
 }
 
 // ── Distribuição em Subpastas ──────────────────────────────────
-let distribRootHandle = null;
-let distribSubfolders = [];
-let distribFormat = 'png';
+var distribRootHandle = null;
+var distribSubfolders = [];
+var distribFormat = 'png';
 
 (function initDistribModal() {
     const modal   = document.getElementById('distrib-modal');
@@ -2705,8 +2705,8 @@ const zmEraserUndo  = document.getElementById('zm-eraser-undo');
 
 const ERASE_SIZES  = [0.012, 0.025, 0.045, 0.075];
 const ERASE_LABELS = ['S', 'M', 'G', 'XG'];
-let eraserSzIdx = 1;
-let eraser = { painting: false, get size() { return ERASE_SIZES[eraserSzIdx]; } };
+var eraserSzIdx = 1;
+var eraser = { painting: false, get size() { return ERASE_SIZES[eraserSzIdx]; } };
 
 function applyEraseCursor() {
     const maxDim = Math.max(eraseCanvas.width || 1, eraseCanvas.height || 1);
@@ -2726,7 +2726,7 @@ function updateEraseCursorSize() {
     if (zoomModal.classList.contains('erase-mode')) applyEraseCursor();
 }
 
-let zm = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1 };
+var zm = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1 };
 
 document.getElementById('zoom-backdrop').addEventListener('click', closeZoom);
 document.getElementById('zm-close').addEventListener('click', closeZoom);
@@ -2771,7 +2771,6 @@ document.addEventListener('keydown', e => {
 });
 
 async function openZoom(tab, n, startCrop = false) {
-    try {
     zm.tab  = tab;
     zm.page = n;
     // Reset modes BEFORE showing the modal so it never opens in a dirty state
@@ -2798,7 +2797,6 @@ async function openZoom(tab, n, startCrop = false) {
     loadZoomHD(tab, n).then(() => {
         if (startCrop && zm.tab?.id === tab.id && zm.page === n) enterCropMode();
     });
-    } catch(e) { toast('Zoom erro: ' + (e?.message ?? e)); console.error('[openZoom]', e); }
 }
 
 function closeZoom() {
@@ -2885,7 +2883,7 @@ function zmUpdateLabel() {
 }
 
 // ── Crop Mode ──
-let crop = { drawing: false, x0: 0, y0: 0 };
+var crop = { drawing: false, x0: 0, y0: 0 };
 
 function syncCropCanvas() {
     const w = parseInt(zoomImgEl.style.width)  || zoomImgEl.naturalWidth;
@@ -3201,7 +3199,7 @@ async function performCrop(rx, ry, rw, rh) {
 }
 
 // ── Gallery ──
-let galleryItems = [];
+var galleryItems = [];
 
 const galleryModal  = document.getElementById('gallery-modal');
 const galleryGrid   = document.getElementById('gallery-grid');
@@ -3299,7 +3297,7 @@ const galLbScroll  = document.getElementById('gal-lb-scroll');
 const galLbPrevBtn = document.getElementById('gal-lb-prev');
 const galLbNextBtn = document.getElementById('gal-lb-next');
 
-let galLb = { idx: 0, zoom: 1, naturalW: 1, naturalH: 1 };
+var galLb = { idx: 0, zoom: 1, naturalW: 1, naturalH: 1 };
 
 document.getElementById('gal-lb-backdrop').addEventListener('click', galLbClose);
 document.getElementById('gal-lb-close').addEventListener('click', galLbClose);
