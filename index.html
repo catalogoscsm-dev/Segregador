@@ -686,6 +686,19 @@
         #zoom-modal.erase-rect-mode #crop-canvas { display: block; cursor: crosshair; }
         #zoom-modal.erase-rect-mode #zoom-scroll { cursor: crosshair; }
 
+        /* Insert cropped image mode */
+        #insert-canvas {
+            position: absolute; inset: 0;
+            border-radius: 2px;
+            pointer-events: none;
+            display: block;
+        }
+        #zoom-modal.insert-mode #zoom-scroll { cursor: copy; }
+        #zm-insert-btn { margin-left: 0.25rem; display: none; }
+        #zm-insert-btn.active { border-color: #22c55e !important; color: #4ade80 !important; background: rgba(34,197,94,0.12) !important; }
+        #zm-insert-undo { margin-left: 0.25rem; display: none; border-color: rgba(251,191,36,0.5) !important; color: #fbbf24 !important; }
+        #zm-insert-undo:hover { background: rgba(251,191,36,0.15) !important; border-color: #fbbf24 !important; }
+
         /* ── Gallery Modal ── */
         #gallery-modal {
             display: none; position: fixed; inset: 0; z-index: 700;
@@ -1343,6 +1356,12 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
                     <span style="font-size:0.65rem;margin-left:2px;opacity:0.75">Z</span>
                 </button>
+                <button class="zm-btn" id="zm-insert-btn" title="Inserir último recorte na página (I)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                </button>
+                <button class="zm-btn" id="zm-insert-undo" title="Desfazer última inserção">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+                </button>
             </div>
             <button id="zm-close">
                 <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1354,6 +1373,7 @@
                 <div id="zoom-img-box">
                     <img id="zoom-img" alt="">
                     <canvas id="erase-canvas"></canvas>
+                    <canvas id="insert-canvas"></canvas>
                     <canvas id="crop-canvas"></canvas>
                 </div>
             </div>
@@ -1724,6 +1744,7 @@ var eraserSzIdx = 1;
 var eraser     = { painting: false, get size() { return [0.012, 0.025, 0.045, 0.075][eraserSzIdx]; } };
 var galleryItems = [];
 var galLb      = { idx: 0, zoom: 1, naturalW: 1, naturalH: 1 };
+var lastCrop   = null; // {dataURL, normW, normH} — recorte pronto para inserção
 var distribRootHandle = null;
 var distribSubfolders = [];
 var distribFormat = 'png';
@@ -2382,6 +2403,7 @@ async function renderErasedPageCanvas(tab, n) {
         if (lastErr) throw lastErr;
     }
     applyEraseToCanvas(ctx, tab, n, canvas.width, canvas.height);
+    await applyInsertedImages(ctx, tab, n, canvas.width, canvas.height);
     return canvas;
 }
 
@@ -2752,12 +2774,15 @@ const zmNextBtn  = document.getElementById('zm-next');
 const cropCanvas    = document.getElementById('crop-canvas');
 const zmScissors    = document.getElementById('zm-scissors');
 const eraseCanvas   = document.getElementById('erase-canvas');
+const insertCanvas  = document.getElementById('insert-canvas');
 const zmEraser      = document.getElementById('zm-eraser');
 const zmEraserRect  = document.getElementById('zm-eraser-rect');
 const zmEraserSm    = document.getElementById('zm-eraser-sm');
 const zmEraserLg    = document.getElementById('zm-eraser-lg');
 const zmEraserSz    = document.getElementById('zm-eraser-sz');
 const zmEraserUndo  = document.getElementById('zm-eraser-undo');
+const zmInsertBtn   = document.getElementById('zm-insert-btn');
+const zmInsertUndo  = document.getElementById('zm-insert-undo');
 
 const ERASE_SIZES  = [0.012, 0.025, 0.045, 0.075];
 const ERASE_LABELS = ['S', 'M', 'G', 'XG'];
@@ -2801,6 +2826,7 @@ document.addEventListener('keydown', e => {
     const inErase = zoomModal.classList.contains('erase-mode') || zoomModal.classList.contains('erase-rect-mode');
     if (e.key === 'Escape') {
         if (zoomModal.classList.contains('crop-mode')) { exitCropMode(); return; }
+        if (zoomModal.classList.contains('insert-mode')) { exitInsertMode(); return; }
         if (inErase) { exitAllEraseModes(); return; }
         closeZoom(); return;
     }
@@ -2819,6 +2845,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'c' || e.key === 'C') toggleCropMode();
     if (e.key === 'e' || e.key === 'E') toggleEraseMode();
     if (e.key === 'r' || e.key === 'R') enterEraseRectMode();
+    if ((e.key === 'i' || e.key === 'I') && lastCrop) { if (zoomModal.classList.contains('insert-mode')) exitInsertMode(); else enterInsertMode(); }
 });
 
 async function openZoom(tab, n, startCrop = false) {
@@ -2844,6 +2871,7 @@ async function openZoom(tab, n, startCrop = false) {
     zmPrevBtn.disabled = n <= 1;
     zmNextBtn.disabled = n >= tab.totalPages;
     zmUpdateLabel();
+    _syncInsertControls();
 
     loadZoomHD(tab, n).then(() => {
         if (startCrop && zm.tab?.id === tab.id && zm.page === n) enterCropMode();
@@ -2945,7 +2973,12 @@ function syncCropCanvas() {
         eraseCanvas.width  = w;
         eraseCanvas.height = h;
     }
+    if (insertCanvas.width !== w || insertCanvas.height !== h) {
+        insertCanvas.width  = w;
+        insertCanvas.height = h;
+    }
     redrawEraseCanvas();
+    redrawInsertCanvas();
 }
 
 function toggleCropMode() {
@@ -3049,6 +3082,135 @@ function redrawEraseCanvas() {
     }
 }
 
+// ── Insert Cropped Image Mode ──
+var _insertImgCache = {}; // dataURL → HTMLImageElement (loaded)
+
+function _getInsertImg(dataURL, onReady) {
+    if (_insertImgCache[dataURL]) { onReady(_insertImgCache[dataURL]); return; }
+    const img = new Image();
+    img.onload = () => { _insertImgCache[dataURL] = img; onReady(img); };
+    img.src = dataURL;
+}
+
+function redrawInsertCanvas(previewX, previewY) {
+    const tab = zm.tab;
+    const n   = zm.page;
+    const ctx = insertCanvas.getContext('2d');
+    const w   = insertCanvas.width, h = insertCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw all placed images for this page
+    const placed = tab?.insertedImages?.[n];
+    if (placed?.length) {
+        for (const item of placed) {
+            _getInsertImg(item.dataURL, img => {
+                ctx.drawImage(img, item.x * w, item.y * h, item.w * w, item.h * h);
+            });
+        }
+    }
+
+    // Draw drag preview if in insert mode
+    if (zoomModal.classList.contains('insert-mode') && lastCrop && previewX != null) {
+        const pw = lastCrop.normW * w;
+        const ph = lastCrop.normH * h;
+        const px = previewX - pw / 2;
+        const py = previewY - ph / 2;
+        _getInsertImg(lastCrop.dataURL, img => {
+            ctx.globalAlpha = 0.65;
+            ctx.drawImage(img, px, py, pw, ph);
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth   = 1.5;
+            ctx.setLineDash([4, 3]);
+            ctx.strokeRect(px, py, pw, ph);
+            ctx.setLineDash([]);
+        });
+    }
+}
+
+async function applyInsertedImages(ctx, tab, n, w, h) {
+    const placed = tab?.insertedImages?.[n];
+    if (!placed?.length) return;
+    for (const item of placed) {
+        const img = new Image();
+        img.src = item.dataURL;
+        await new Promise(r => img.complete ? r() : (img.onload = r));
+        ctx.drawImage(img, item.x * w, item.y * h, item.w * w, item.h * h);
+    }
+}
+
+function enterInsertMode() {
+    if (!lastCrop) return;
+    exitAllEraseModes();
+    exitCropMode();
+    zoomModal.classList.add('insert-mode');
+    zmInsertBtn.classList.add('active');
+}
+
+function exitInsertMode() {
+    zoomModal.classList.remove('insert-mode');
+    zmInsertBtn.classList.remove('active');
+    redrawInsertCanvas();
+}
+
+function _syncInsertControls() {
+    const hasInserted = !!(zm.tab?.insertedImages?.[zm.page]?.length);
+    if (zmInsertBtn)  zmInsertBtn.style.display  = lastCrop ? '' : 'none';
+    if (zmInsertUndo) zmInsertUndo.style.display = hasInserted ? '' : 'none';
+}
+
+// Mouse handlers for insert mode
+zoomScroll.addEventListener('mousemove', function(ev) {
+    if (!zoomModal.classList.contains('insert-mode') || !lastCrop) return;
+    const r = insertCanvas.getBoundingClientRect();
+    redrawInsertCanvas(ev.clientX - r.left, ev.clientY - r.top);
+});
+
+zoomScroll.addEventListener('mouseleave', function() {
+    if (!zoomModal.classList.contains('insert-mode')) return;
+    redrawInsertCanvas();
+});
+
+zoomScroll.addEventListener('click', function(ev) {
+    if (!zoomModal.classList.contains('insert-mode') || !lastCrop) return;
+    const r = insertCanvas.getBoundingClientRect();
+    const cx = ev.clientX - r.left;
+    const cy = ev.clientY - r.top;
+    const w  = insertCanvas.width, h = insertCanvas.height;
+    const nx = (cx / w) - lastCrop.normW / 2;
+    const ny = (cy / h) - lastCrop.normH / 2;
+    const tab = zm.tab, n = zm.page;
+    if (!tab) return;
+    if (!tab.insertedImages)    tab.insertedImages = {};
+    if (!tab.insertedImages[n]) tab.insertedImages[n] = [];
+    tab.insertedImages[n].push({
+        id: `ins_${Date.now()}`,
+        dataURL: lastCrop.dataURL,
+        x: nx, y: ny,
+        w: lastCrop.normW, h: lastCrop.normH
+    });
+    markPage(tab, n);
+    exitInsertMode();
+    _syncInsertControls();
+    toast('✓ Imagem inserida na página!');
+});
+
+// Insert button & undo
+zmInsertBtn.addEventListener('click', function() {
+    if (zoomModal.classList.contains('insert-mode')) exitInsertMode();
+    else enterInsertMode();
+});
+
+zmInsertUndo.addEventListener('click', function() {
+    const tab = zm.tab, n = zm.page;
+    if (!tab?.insertedImages?.[n]?.length) return;
+    tab.insertedImages[n].pop();
+    markPage(tab, n);
+    redrawInsertCanvas();
+    _syncInsertControls();
+    toast('↩ Inserção desfeita.');
+});
+
 function _syncEraseControls() {
     try {
         const isBrush   = zoomModal.classList.contains('erase-mode');
@@ -3068,6 +3230,7 @@ function exitAllEraseModes() {
     try { eraser.painting = false; } catch (_) {}
     try { zoomModal.classList.remove('erase-mode'); } catch (_) {}
     try { zoomModal.classList.remove('erase-rect-mode'); } catch (_) {}
+    try { zoomModal.classList.remove('insert-mode'); zmInsertBtn?.classList.remove('active'); } catch (_) {}
     _syncEraseControls();
 }
 
@@ -3234,17 +3397,22 @@ async function performCrop(rx, ry, rw, rh) {
     out.width = srcW; out.height = srcH;
     out.getContext('2d').drawImage(img, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
+    const cropDataURL = out.toDataURL('image/png');
     galleryAdd({
         id:       `crop_${Date.now()}`,
-        dataURL:  out.toDataURL('image/png'),
+        dataURL:  cropDataURL,
         fileName: tab.fileName,
         shortName:tab.shortName,
         page:     n,
         realPage: realPageNum(tab, n),
         w: srcW, h: srcH
     });
+    // Store for optional insertion into the page
+    lastCrop = { dataURL: cropDataURL, normW: srcW / hd.w, normH: srcH / hd.h };
+    _getInsertImg(cropDataURL, () => {}); // preload into cache for smooth preview
+    _syncInsertControls();
     markPage(tab, n);
-    toast('✂ Recorte adicionado à galeria!');
+    toast('✂ Recorte adicionado à galeria! Clique em ⊞ para inserir na página.');
 }
 
 // ── Gallery ──
