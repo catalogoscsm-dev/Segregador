@@ -3427,9 +3427,18 @@ async function performCrop(rx, ry, rw, rh) {
     img.src = hd.src;
     await new Promise(r => img.complete ? r() : (img.onload = r));
 
+    // Aplica pinceladas de apagamento antes de recortar
+    const full = document.createElement('canvas');
+    full.width = hd.w; full.height = hd.h;
+    const fullCtx = full.getContext('2d');
+    fullCtx.fillStyle = '#ffffff';
+    fullCtx.fillRect(0, 0, hd.w, hd.h);
+    fullCtx.drawImage(img, 0, 0);
+    applyEraseToCanvas(fullCtx, tab, n, hd.w, hd.h);
+
     const out = document.createElement('canvas');
     out.width = srcW; out.height = srcH;
-    out.getContext('2d').drawImage(img, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+    out.getContext('2d').drawImage(full, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
     const cropDataURL = out.toDataURL('image/png');
     galleryAdd({
