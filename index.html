@@ -676,6 +676,17 @@
         #zm-eraser.active { border-color: #ef4444 !important; color: #f87171 !important; background: rgba(239,68,68,0.12) !important; }
         .zm-eraser-ctrl { font-size: 0.72rem; color: var(--text-3); min-width: 22px; text-align: center; user-select: none; }
 
+        /* Eraser color picker */
+        #zm-eraser-color-wrap { display: none; align-items: center; gap: 4px; margin-left: 0.25rem; }
+        #zm-eraser-color-wrap.visible { display: flex; }
+        #zm-eraser-color-btn {
+            width: 22px; height: 22px; border-radius: 4px; border: 2px solid rgba(255,255,255,0.35);
+            cursor: pointer; padding: 0; background: #ffffff; flex-shrink: 0;
+            transition: border-color 0.15s;
+        }
+        #zm-eraser-color-btn:hover { border-color: rgba(255,255,255,0.75); }
+        #zm-eraser-color-input { display: none; }
+
         /* Eraser cursor — gerado via JS como SVG data URL no canvas */
 
         #zm-eraser-undo { margin-left: 0.5rem; border-color: rgba(251,191,36,0.5) !important; color: #fbbf24 !important; }
@@ -1356,6 +1367,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
                     <span style="font-size:0.65rem;margin-left:2px;opacity:0.75">Z</span>
                 </button>
+                <span id="zm-eraser-color-wrap" title="Cor de preenchimento da borracha">
+                    <button id="zm-eraser-color-btn" title="Cor da borracha (clique para alterar)"></button>
+                    <input id="zm-eraser-color-input" type="color" value="#ffffff">
+                </span>
                 <button class="zm-btn" id="zm-insert-btn" title="Inserir último recorte na página (I)" style="display:none">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                 </button>
@@ -1741,6 +1756,7 @@ var dragSrcPage = null;
 var zm         = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1 };
 var crop       = { drawing: false, x0: 0, y0: 0 };
 var eraserSzIdx = 1;
+var eraserColor = '#ffffff';
 var eraser     = { painting: false, get size() { return [0.012, 0.025, 0.045, 0.075][eraserSzIdx]; } };
 var galleryItems = [];
 var galLb      = { idx: 0, zoom: 1, naturalW: 1, naturalH: 1 };
@@ -2341,15 +2357,16 @@ function realPageNum(tab, n) {
 
 // ── Erase helpers ──
 function pageHasErase(tab, n) {
-    return !!(tab.eraseStrokes?.[n]?.some(s => s.length > 0));
+    return !!(tab.eraseStrokes?.[n]?.some(s => (s.pts ?? s).length > 0));
 }
 
 function applyEraseToCanvas(ctx, tab, n, w, h) {
     if (!tab.eraseStrokes?.[n]) return;
     const maxDim = Math.max(w, h);
-    ctx.fillStyle = '#ffffff';
     for (const session of tab.eraseStrokes[n]) {
-        for (const pt of session) {
+        const pts = session.pts ?? session;
+        ctx.fillStyle = session.color ?? '#ffffff';
+        for (const pt of pts) {
             if (pt.type === 'rect') {
                 ctx.fillRect(pt.x * w, pt.y * h, pt.w * w, pt.h * h);
             } else {
@@ -2780,9 +2797,22 @@ const zmEraserRect  = document.getElementById('zm-eraser-rect');
 const zmEraserSm    = document.getElementById('zm-eraser-sm');
 const zmEraserLg    = document.getElementById('zm-eraser-lg');
 const zmEraserSz    = document.getElementById('zm-eraser-sz');
-const zmEraserUndo  = document.getElementById('zm-eraser-undo');
+const zmEraserUndo       = document.getElementById('zm-eraser-undo');
+const zmEraserColorWrap  = document.getElementById('zm-eraser-color-wrap');
+const zmEraserColorBtn   = document.getElementById('zm-eraser-color-btn');
+const zmEraserColorInput = document.getElementById('zm-eraser-color-input');
 const zmInsertBtn   = document.getElementById('zm-insert-btn');
 const zmInsertUndo  = document.getElementById('zm-insert-undo');
+
+// Color picker wiring
+zmEraserColorBtn.addEventListener('click', () => zmEraserColorInput.click());
+function _applyEraserColor(val) {
+    eraserColor = val;
+    zmEraserColorBtn.style.background = eraserColor;
+    if (zoomModal.classList.contains('erase-mode')) applyEraseCursor();
+}
+zmEraserColorInput.addEventListener('input',  e => _applyEraserColor(e.target.value));
+zmEraserColorInput.addEventListener('change', e => _applyEraserColor(e.target.value));
 
 const ERASE_SIZES  = [0.012, 0.025, 0.045, 0.075];
 const ERASE_LABELS = ['S', 'M', 'G', 'XG'];
@@ -2792,8 +2822,9 @@ function applyEraseCursor() {
     const cap    = Math.min(rad, 60); // CSS cursor max ≈ 128px; cap radius at 60
     const size   = Math.ceil(cap * 2) + 4;
     const c      = size / 2;
+    const ec  = eraserColor || '#ffffff';
     const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'>`
-              + `<circle cx='${c}' cy='${c}' r='${cap}' fill='none' stroke='rgba(239,68,68,0.85)' stroke-width='1.5' stroke-dasharray='3 2'/>`
+              + `<circle cx='${c}' cy='${c}' r='${cap}' fill='${ec}' fill-opacity='0.45' stroke='rgba(239,68,68,0.85)' stroke-width='1.5' stroke-dasharray='3 2'/>`
               + `<line x1='${c}' y1='${c-5}' x2='${c}' y2='${c+5}' stroke='rgba(239,68,68,0.85)' stroke-width='1'/>`
               + `<line x1='${c-5}' y1='${c}' x2='${c+5}' y2='${c}' stroke='rgba(239,68,68,0.85)' stroke-width='1'/>`
               + `</svg>`;
@@ -3068,9 +3099,10 @@ function redrawEraseCanvas() {
     if (!tab?.eraseStrokes?.[n]?.length) return;
     const w = eraseCanvas.width, h = eraseCanvas.height;
     const maxDim = Math.max(w, h);
-    ctx.fillStyle = '#ffffff';
     for (const session of tab.eraseStrokes[n]) {
-        for (const pt of session) {
+        const pts = session.pts ?? session;
+        ctx.fillStyle = session.color ?? '#ffffff';
+        for (const pt of pts) {
             if (pt.type === 'rect') {
                 ctx.fillRect(pt.x * w, pt.y * h, pt.w * w, pt.h * h);
             } else {
@@ -3219,10 +3251,11 @@ function _syncEraseControls() {
         const hasStrokes = !!(zm.tab?.eraseStrokes?.[zm.page]?.length);
         if (zmEraser)     zmEraser.classList.toggle('active', isBrush);
         if (zmEraserRect) zmEraserRect.classList.toggle('active', isRect);
-        if (zmEraserSm)   zmEraserSm.style.display   = isBrush ? '' : 'none';
-        if (zmEraserLg)   zmEraserLg.style.display   = isBrush ? '' : 'none';
-        if (zmEraserSz)   zmEraserSz.style.display   = isBrush ? '' : 'none';
-        if (zmEraserUndo) zmEraserUndo.style.display = (any || hasStrokes) ? '' : 'none';
+        if (zmEraserSm)        zmEraserSm.style.display   = isBrush ? '' : 'none';
+        if (zmEraserLg)        zmEraserLg.style.display   = isBrush ? '' : 'none';
+        if (zmEraserSz)        zmEraserSz.style.display   = isBrush ? '' : 'none';
+        if (zmEraserUndo)      zmEraserUndo.style.display = (any || hasStrokes) ? '' : 'none';
+        if (zmEraserColorWrap) zmEraserColorWrap.classList.toggle('visible', any);
     } catch (e) { console.error('_syncEraseControls:', e); }
 }
 
@@ -3286,9 +3319,9 @@ function performRectErase(rx, ry, rw, rh) {
     if (!tab.eraseStrokes)    tab.eraseStrokes    = {};
     if (!tab.eraseStrokes[n]) tab.eraseStrokes[n] = [];
     const w = eraseCanvas.width, h = eraseCanvas.height;
-    tab.eraseStrokes[n].push([{ type: 'rect', x: rx/w, y: ry/h, w: rw/w, h: rh/h }]);
+    tab.eraseStrokes[n].push({ color: eraserColor, pts: [{ type: 'rect', x: rx/w, y: ry/h, w: rw/w, h: rh/h }] });
     const ctx = eraseCanvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = eraserColor;
     ctx.fillRect(rx, ry, rw, rh);
     toast('◻ Área apagada!');
 }
@@ -3329,7 +3362,7 @@ eraseCanvas.addEventListener('mousedown', e => {
     if (!tab) return;
     if (!tab.eraseStrokes)    tab.eraseStrokes    = {};
     if (!tab.eraseStrokes[n]) tab.eraseStrokes[n] = [];
-    tab.eraseStrokes[n].push([]);
+    tab.eraseStrokes[n].push({ color: eraserColor, pts: [] });
 
     const r2 = eraseCanvas.getBoundingClientRect();
     _erasePointAt(e.clientX - r2.left, e.clientY - r2.top);
@@ -3361,11 +3394,12 @@ function _erasePointAt(x, y) {
     const maxDim = Math.max(w, h);
     const rad = eraser.size * maxDim;
     const ctx = eraseCanvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
+    const curSession = tab.eraseStrokes[n][tab.eraseStrokes[n].length - 1];
+    ctx.fillStyle = curSession.color ?? eraserColor;
     ctx.beginPath();
     ctx.arc(x, y, rad, 0, Math.PI * 2);
     ctx.fill();
-    tab.eraseStrokes[n][tab.eraseStrokes[n].length - 1].push({
+    (curSession.pts ?? curSession).push({
         x: x / w, y: y / h, r: eraser.size
     });
 }
