@@ -1,0 +1,115 @@
+const http = require('http');
+const fs   = require('fs');
+const path = require('path');
+const url  = require('url');
+
+// ── CONFIGURAÇÃO ─────────────────────────────────────────────────────────────
+// Altere ROOT_FOLDER para a pasta que quer trabalhar
+const ROOT_FOLDER = 'C:\\Users\\joao.miguel\\Documents\\PROJETOS CSM\\catalogos\\catalogos separados\\ARMIL COMPLETO 2024\\imagens dos produtos';
+const PORT        = 8787;
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STATIC_DIR = __dirname;
+
+const MIME = {
+    '.html': 'text/html; charset=utf-8',
+    '.js':   'application/javascript',
+    '.css':  'text/css',
+    '.png':  'image/png',
+    '.jpg':  'image/jpeg',
+    '.svg':  'image/svg+xml',
+    '.ico':  'image/x-icon',
+    '.pdf':  'application/pdf',
+    '.json': 'application/json',
+    '.woff2':'font/woff2',
+};
+
+function cors(res) {
+    res.setHeader('Access-Control-Allow-Origin',  '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
+function getSubfolders(dir) {
+    try {
+        return fs.readdirSync(dir, { withFileTypes: true })
+            .filter(d => d.isDirectory())
+            .map(d => d.name)
+            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    } catch { return []; }
+}
+
+const server = http.createServer((req, res) => {
+    cors(res);
+    if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
+
+    const parsed = url.parse(req.url, true);
+    const pathname = parsed.pathname;
+
+    // ── GET /api/folders ──────────────────────────────────────────────────────
+    if (pathname === '/api/folders' && req.method === 'GET') {
+        const exists = fs.existsSync(ROOT_FOLDER);
+        const folders = exists ? getSubfolders(ROOT_FOLDER) : [];
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ root: ROOT_FOLDER, folders, exists }));
+        return;
+    }
+
+    // ── POST /api/save ────────────────────────────────────────────────────────
+    if (pathname === '/api/save' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const { folder, filename, data } = JSON.parse(body);
+
+                // segurança: destino tem de estar dentro de ROOT_FOLDER
+                const destDir  = path.resolve(path.join(ROOT_FOLDER, folder));
+                const rootRes  = path.resolve(ROOT_FOLDER);
+                if (!destDir.startsWith(rootRes)) {
+                    res.writeHead(403, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Caminho fora da pasta raiz.' }));
+                    return;
+                }
+
+                if (!fs.existsSync(destDir)) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: `Pasta não encontrada: ${folder}` }));
+                    return;
+                }
+
+                const filePath = path.join(destDir, filename);
+                fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, path: filePath }));
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
+    // ── Ficheiros estáticos ───────────────────────────────────────────────────
+    let filePath = path.join(STATIC_DIR, pathname === '/' ? 'index.html' : pathname);
+    // segurança: não sair do STATIC_DIR
+    if (!path.resolve(filePath).startsWith(path.resolve(STATIC_DIR))) {
+        res.writeHead(403); res.end('Forbidden'); return;
+    }
+
+    fs.readFile(filePath, (err, data) => {
+        if (err) { res.writeHead(404); res.end('Not found'); return; }
+        const ext  = path.extname(filePath).toLowerCase();
+        const mime = MIME[ext] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': mime });
+        res.end(data);
+    });
+});
+
+server.listen(PORT, () => {
+    console.log(`\n✓ Servidor iniciado em http://localhost:${PORT}`);
+    console.log(`  Pasta raiz: ${ROOT_FOLDER}`);
+    const exists = fs.existsSync(ROOT_FOLDER);
+    if (!exists) console.warn(`  ⚠ Atenção: pasta raiz não encontrada — verifique o caminho em ROOT_FOLDER`);
+    else         console.log(`  Subpastas: ${getSubfolders(ROOT_FOLDER).length} encontradas\n`);
+});

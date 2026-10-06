@@ -586,6 +586,68 @@
         }
         .distrib-btn-exec:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(5,150,105,0.5); }
         .distrib-btn-exec:disabled { opacity: 0.4; cursor: not-allowed; }
+        .distrib-reconnect-row {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.45rem 0.7rem; border-radius: 8px;
+            background: rgba(234,179,8,0.08); border: 1px solid rgba(234,179,8,0.22);
+            font-size: 0.8rem;
+        }
+        .distrib-reconnect-name {
+            flex: 1; font-weight: 600; color: #fbbf24;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .distrib-reconnect-btn {
+            padding: 0.28rem 0.7rem; border-radius: 6px; font-size: 0.78rem;
+            font-weight: 700; cursor: pointer; font-family: inherit;
+            background: rgba(234,179,8,0.18); border: 1px solid rgba(234,179,8,0.4);
+            color: #fbbf24;
+        }
+        .distrib-reconnect-btn:hover { background: rgba(234,179,8,0.28); }
+        .distrib-input-num { max-width: 64px; text-align: center; }
+        .distrib-perpasta-hint { font-size: 0.78rem; color: var(--text-2); }
+
+        /* ── Dest root bar ── */
+        #dest-root-bar {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.4rem 1rem;
+            background: rgba(16,185,129,0.06);
+            border-bottom: 1px solid rgba(16,185,129,0.14);
+            font-size: 0.79rem; flex-shrink: 0;
+        }
+        #dest-root-bar .dest-icon { color: #4ade80; flex-shrink: 0; }
+        #dest-root-label { font-weight: 600; color: var(--text); flex: 1;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #dest-root-label.empty { color: var(--text-2); font-weight: 400; font-style: italic; }
+        #dest-root-count { font-size: 0.74rem; color: var(--text-2); flex-shrink: 0; }
+
+        /* ── Card dest input ── */
+        .card-dest {
+            display: flex; align-items: center; gap: 0.35rem;
+            padding: 0.32rem 0.55rem;
+            background: var(--bg); border-top: 1px solid var(--border);
+        }
+        .card-dest-input {
+            flex: 1; min-width: 0;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 5px; color: var(--text);
+            padding: 0.22rem 0.45rem; font-size: 0.74rem;
+            outline: none; font-family: inherit;
+        }
+        .card-dest-input:focus { border-color: var(--a1); }
+        .card-dest-input::placeholder { color: var(--text-3); }
+        .card-dest-match {
+            font-size: 0.7rem; font-weight: 600; flex-shrink: 0;
+            max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .card-dest-match.ok  { color: #4ade80; }
+        .card-dest-match.err { color: #f87171; }
+
+        /* Salvar destinos button */
+        .btn-dl-savedests {
+            background: linear-gradient(135deg, #065f46, #059669);
+            color: white; box-shadow: 0 4px 20px rgba(5,150,105,0.35);
+        }
+        .btn-dl-savedests:hover { transform: translateY(-2px); box-shadow: 0 8px 35px rgba(5,150,105,0.5); }
 
         /* Sub-group tab indicator */
         .tab-item.subgroup .tab-dot { background: var(--a3); box-shadow: 0 0 6px var(--glow2); }
@@ -861,6 +923,39 @@
         .gal-btn.save { border-color: rgba(22,163,74,0.3); color: #4ade80; }
         .gal-btn.save:hover { background: rgba(22,163,74,0.12); border-color: #16a34a; }
         .gal-btn.discard:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
+        .gal-btn.priority { border-color: rgba(251,191,36,0.2); color: var(--text-3); font-size: 0.7rem; }
+        .gal-btn.priority:hover { border-color: rgba(251,191,36,0.5); color: #fbbf24; background: rgba(251,191,36,0.08); }
+        .gal-btn.priority.active { border-color: rgba(251,191,36,0.6); color: #fbbf24; background: rgba(251,191,36,0.12); font-weight: 700; }
+        .gal-capa-badge {
+            display: inline-block; font-size: 0.6rem; font-weight: 700;
+            background: rgba(251,191,36,0.18); color: #fbbf24;
+            border: 1px solid rgba(251,191,36,0.4); border-radius: 4px;
+            padding: 0 0.3rem; margin-left: 0.3rem; vertical-align: middle; letter-spacing: 0.04em;
+        }
+        /* prioridade/capa nos cards */
+        .card-priority-btn {
+            background: none; border: none; cursor: pointer; padding: 0;
+            font-size: 0.85rem; line-height: 1; color: var(--text-3);
+            flex-shrink: 0; transition: color 0.15s, transform 0.15s;
+        }
+        .card-priority-btn:hover  { color: #fbbf24; transform: scale(1.2); }
+        .card-priority-btn.active { color: #fbbf24; }
+
+        .gal-dest {
+            display: flex; align-items: center; gap: 0.35rem;
+            padding: 0.32rem 0.65rem; border-top: 1px solid var(--border);
+            background: var(--bg);
+        }
+        .gal-dest-input {
+            flex: 1; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 5px; color: var(--text); padding: 0.22rem 0.45rem;
+            font-size: 0.74rem; outline: none; font-family: inherit;
+        }
+        .gal-dest-input:focus { border-color: var(--a1); }
+        .gal-dest-input::placeholder { color: var(--text-3); }
+        .gal-dest-match { font-size: 0.7rem; font-weight: 600; flex-shrink: 0; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .gal-dest-match.ok  { color: #4ade80; }
+        .gal-dest-match.err { color: #f87171; }
 
         /* ── Zoom Modal ── */
         #zoom-modal {
@@ -1230,6 +1325,16 @@
         </div>
     </div>
 
+    <!-- Dest root bar -->
+    <div id="dest-root-bar">
+        <svg class="dest-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span id="dest-root-label" class="empty">Pasta raiz não definida — define para ativar destino por card</span>
+        <span id="dest-root-count"></span>
+        <button class="cp-btn primary" id="dest-root-btn" style="font-size:0.75rem;padding:0.22rem 0.6rem;">Definir</button>
+    </div>
+
     <!-- Pages Grid -->
     <main class="pages-wrap">
         <div class="pages-grid" id="pages-grid"></div>
@@ -1260,6 +1365,12 @@
                     <line x1="5" y1="3" x2="5" y2="9"/><line x1="3" y1="7" x2="5" y2="9"/><line x1="7" y1="7" x2="5" y2="9"/>
                 </svg>
                 Individual
+            </button>
+            <button class="btn-dl btn-dl-savedests" id="btn-save-dests" title="Salvar cada card na pasta definida" style="display:none">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                </svg>
+                <span id="btn-save-dests-lbl">Salvar destinos</span>
             </button>
             <button class="btn-dl btn-dl-distrib" id="btn-distrib" title="Distribuir páginas em subpastas numeradas">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1412,10 +1523,20 @@
                 <span class="distrib-val" id="distrib-root-val">Nenhuma pasta selecionada</span>
                 <button class="cp-btn primary" id="distrib-select-btn">Selecionar</button>
             </div>
+            <div id="distrib-reconnect-row" class="distrib-reconnect-row" style="display:none">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5" style="flex-shrink:0"><path d="M21 12A9 9 0 1 1 12 3"/><polyline points="21 3 21 9 15 9"/></svg>
+                <span class="distrib-reconnect-name" id="distrib-reconnect-name"></span>
+                <button class="distrib-reconnect-btn" id="distrib-reconnect-btn">Reconectar</button>
+            </div>
             <div id="distrib-config" style="display:none; flex-direction:column; gap:0.6rem;">
                 <div class="distrib-row">
                     <span class="distrib-label">Nome do arquivo</span>
                     <input class="distrib-input" id="distrib-fname" type="text" placeholder="foto" value="foto">
+                </div>
+                <div class="distrib-row">
+                    <span class="distrib-label">Por pasta</span>
+                    <input class="distrib-input distrib-input-num" id="distrib-perpasta" type="number" min="1" max="99" value="1">
+                    <span class="distrib-perpasta-hint">arquivo(s)</span>
                 </div>
                 <div class="distrib-row">
                     <span class="distrib-label">Formato</span>
@@ -1762,8 +1883,10 @@ var galleryItems = [];
 var galLb      = { idx: 0, zoom: 1, naturalW: 1, naturalH: 1 };
 var lastCrop   = null; // {dataURL, normW, normH} — recorte pronto para inserção
 var distribRootHandle = null;
+var distribSavedHandle = null;
 var distribSubfolders = [];
 var distribFormat = 'png';
+var distribPagesPerFolder = 1;
 
 // ── Grid view mode ──
 const _gridViewKey = 'csm-grid-view';
@@ -1860,6 +1983,15 @@ document.getElementById('btn-distrib').addEventListener('click', () => {
     if (!tab?.selected.size) { toast('Selecione páginas primeiro.'); return; }
     renderDistribPreview();
     document.getElementById('distrib-modal').classList.add('open');
+});
+
+document.getElementById('btn-save-dests').addEventListener('click', saveAllDests);
+
+document.getElementById('dest-root-btn').addEventListener('click', () => {
+    loadFoldersFromAPI().then(() => {
+        if (destApiRoot) toast(`✓ ${destApiFolders.length} pastas carregadas de: ${destApiRoot.split('\\').pop()}`);
+        else toast('Servidor não encontrado. Inicie com: node server.js');
+    });
 });
 
 // ── Load file → create tab ──
@@ -1986,15 +2118,19 @@ function activateTab(id) {
         : `${t.totalPages} página${t.totalPages!==1?'s':''} · ${fmtBytes(t.fileSize)}`;
 
     dbSaveMeta('activeTabId', id); // remember which tab was open
+    if (!t.pageDests) t.pageDests = {};
     syncTabBar();
     buildGrid(t);
     syncSelection(t);
+    updateSaveDestsBtn();
 }
 
 function closeTab(id) {
     const idx = tabs.findIndex(t => t.id === id);
     if (idx === -1) return;
     tabs.splice(idx, 1);
+    clearTimeout(_saveTimer[id]);   // cancela qualquer save pendente antes de apagar
+    delete _saveTimer[id];
     dbDeleteTab(id);       // remove PDF bytes from IndexedDB
     dbDeleteThumbs(id);    // remove thumbnails from IndexedDB
     lsDeleteSelection(id); // remove selection from localStorage
@@ -2085,10 +2221,63 @@ function makeCard(tab, n) {
                 <svg viewBox="0 0 11 11"><polyline points="1.5,5.5 4,8.5 9.5,2.5"/></svg>
             </div>
         </div>
+        <div class="card-dest">
+            <button class="card-priority-btn${tab.pageDests?.[n]?.isPriority ? ' active' : ''}" title="Marcar como capa desta pasta">★</button>
+            <input class="card-dest-input" type="text" placeholder="→ pasta (ex: 6, 8b)" autocomplete="off"
+                value="${tab.pageDests?.[n]?.query || ''}">
+            <span class="card-dest-match"></span>
+        </div>
         <div class="card-overlay"></div>`;
 
+    // dest input — isolate from card selection & drag
+    const destInput    = card.querySelector('.card-dest-input');
+    const priorityBtn  = card.querySelector('.card-priority-btn');
+
+    destInput.addEventListener('click',     e => e.stopPropagation());
+    destInput.addEventListener('mousedown', e => e.stopPropagation());
+    destInput.addEventListener('dblclick',  e => e.stopPropagation());
+    destInput.addEventListener('dragstart', e => e.stopPropagation());
+    destInput.addEventListener('input', e => {
+        e.stopPropagation();
+        if (!tab.pageDests) tab.pageDests = {};
+        const q    = e.target.value.trim();
+        const name = q ? matchDestFolder(q) : null;
+        const wasPriority = tab.pageDests[n]?.isPriority || false;
+        tab.pageDests[n] = { query: q, name: name || null, isPriority: wasPriority };
+        updateCardDestUI(card, n, tab);
+        updateSaveDestsBtn();
+    });
+
+    priorityBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!tab.pageDests) tab.pageDests = {};
+        const dest = tab.pageDests[n];
+        if (!dest?.name) { toast('Define primeiro o destino da pasta.'); return; }
+        const isNowPriority = !dest.isPriority;
+        // desativa prioridade de qualquer outro card com o mesmo destino
+        if (isNowPriority) {
+            Object.entries(tab.pageDests).forEach(([k, d]) => {
+                if (parseInt(k) !== n && d.name === dest.name) {
+                    d.isPriority = false;
+                    const otherCard = pagesGrid.querySelector(`[data-page="${k}"]`);
+                    if (otherCard) {
+                        const btn = otherCard.querySelector('.card-priority-btn');
+                        if (btn) btn.classList.remove('active');
+                    }
+                }
+            });
+        }
+        dest.isPriority = isNowPriority;
+        priorityBtn.classList.toggle('active', isNowPriority);
+    });
+
+    priorityBtn.addEventListener('mousedown', e => e.stopPropagation());
+
+    // restore indicator for already-set destinations (after buildGrid)
+    if (tab.pageDests?.[n]?.query) updateCardDestUI(card, n, tab);
+
     card.addEventListener('click', e => {
-        if (e.target.closest('.card-dl-btn') || e.target.closest('.card-img-dl-btn') || e.target.closest('.card-expand-btn') || e.target.closest('.card-crop-btn') || e.target.closest('.card-mark-dot')) return;
+        if (e.target.closest('.card-dl-btn') || e.target.closest('.card-img-dl-btn') || e.target.closest('.card-expand-btn') || e.target.closest('.card-crop-btn') || e.target.closest('.card-mark-dot') || e.target.closest('.card-dest')) return;
         onCardClick(e, tab, n);
     });
     card.querySelector('.card-mark-dot').addEventListener('click', e => {
@@ -2585,15 +2774,19 @@ async function downloadIndividual() {
 // ── Distribuição em Subpastas ──────────────────────────────────
 (function initDistribModal() {
     const modal   = document.getElementById('distrib-modal');
-    const closeEl = document.getElementById('distrib-close');
-    const cancel  = document.getElementById('distrib-cancel');
-    const selBtn  = document.getElementById('distrib-select-btn');
-    const fmtPng  = document.getElementById('distrib-fmt-png');
-    const fmtPdf  = document.getElementById('distrib-fmt-pdf');
-    const execBtn = document.getElementById('distrib-execute');
-    const fnInput = document.getElementById('distrib-fname');
+    const closeEl    = document.getElementById('distrib-close');
+    const cancel     = document.getElementById('distrib-cancel');
+    const selBtn     = document.getElementById('distrib-select-btn');
+    const reconRow   = document.getElementById('distrib-reconnect-row');
+    const reconName  = document.getElementById('distrib-reconnect-name');
+    const reconBtn   = document.getElementById('distrib-reconnect-btn');
+    const fmtPng     = document.getElementById('distrib-fmt-png');
+    const fmtPdf     = document.getElementById('distrib-fmt-pdf');
+    const execBtn    = document.getElementById('distrib-execute');
+    const fnInput    = document.getElementById('distrib-fname');
+    const ppInput    = document.getElementById('distrib-perpasta');
 
-    if (!modal || !closeEl || !cancel || !selBtn || !fmtPng || !fmtPdf || !execBtn || !fnInput) {
+    if (!modal || !closeEl || !cancel || !selBtn || !fmtPng || !fmtPdf || !execBtn || !fnInput || !ppInput) {
         console.warn('[initDistribModal] Um ou mais elementos do modal de distribuição não foram encontrados — funcionalidade desativada.');
         return;
     }
@@ -2606,11 +2799,34 @@ async function downloadIndividual() {
         try {
             const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
             distribRootHandle = handle;
+            distribSavedHandle = null;
             await saveDistribHandle(handle);
             await refreshDistribSubfolders();
+            refreshDestRootBar();
             renderDistribPreview();
         } catch (e) {
             if (e.name !== 'AbortError') toast('Erro ao selecionar pasta.');
+        }
+    });
+
+    reconBtn.addEventListener('click', async () => {
+        if (!distribSavedHandle) return;
+        try {
+            const perm = await distribSavedHandle.requestPermission({ mode: 'readwrite' });
+            if (perm === 'granted') {
+                distribRootHandle = distribSavedHandle;
+                distribSavedHandle = null;
+                await saveDistribHandle(distribRootHandle);
+                await refreshDistribSubfolders();
+                refreshDestRootBar();
+                renderDistribPreview();
+                const tab = activeTab();
+                if (tab) { rematchAllDests(tab); rebuildCardDestUIs(tab); updateSaveDestsBtn(); }
+            } else {
+                toast('Permissão negada. Use "Selecionar" para escolher a pasta.');
+            }
+        } catch (e) {
+            if (e.name !== 'AbortError') toast('Erro ao reconectar pasta.');
         }
     });
 
@@ -2626,6 +2842,11 @@ async function downloadIndividual() {
     });
 
     fnInput.addEventListener('input', renderDistribPreview);
+    ppInput.addEventListener('input', () => {
+        distribPagesPerFolder = Math.max(1, parseInt(ppInput.value) || 1);
+        ppInput.value = distribPagesPerFolder;
+        renderDistribPreview();
+    });
     execBtn.addEventListener('click', executeDistrib);
 })();
 
@@ -2643,22 +2864,33 @@ function renderDistribPreview() {
     const tab = activeTab();
     if (!tab) return;
 
-    const rootVal = document.getElementById('distrib-root-val');
-    const selBtn  = document.getElementById('distrib-select-btn');
-    const config  = document.getElementById('distrib-config');
-    const sep     = document.getElementById('distrib-sep');
-    const preview = document.getElementById('distrib-preview');
-    const execBtn = document.getElementById('distrib-execute');
-    const list    = document.getElementById('distrib-preview-list');
-    const summary = document.getElementById('distrib-preview-summary');
-    const fname   = document.getElementById('distrib-fname').value.trim() || 'foto';
+    const rootVal   = document.getElementById('distrib-root-val');
+    const selBtn    = document.getElementById('distrib-select-btn');
+    const reconRow  = document.getElementById('distrib-reconnect-row');
+    const reconName = document.getElementById('distrib-reconnect-name');
+    const config    = document.getElementById('distrib-config');
+    const sep       = document.getElementById('distrib-sep');
+    const preview   = document.getElementById('distrib-preview');
+    const execBtn   = document.getElementById('distrib-execute');
+    const list      = document.getElementById('distrib-preview-list');
+    const summary   = document.getElementById('distrib-preview-summary');
+    const fname     = document.getElementById('distrib-fname').value.trim() || 'foto';
 
-    rootVal.textContent = distribRootHandle ? distribRootHandle.name : 'Nenhuma pasta selecionada';
-    selBtn.textContent  = distribRootHandle ? 'Alterar' : 'Selecionar';
+    // reconectar banner
+    if (distribSavedHandle && !distribRootHandle) {
+        reconRow.style.display  = 'flex';
+        reconName.textContent   = distribSavedHandle.name;
+        rootVal.textContent     = 'Nenhuma pasta selecionada';
+        selBtn.textContent      = 'Selecionar outra';
+    } else {
+        reconRow.style.display = 'none';
+        rootVal.textContent    = distribRootHandle ? distribRootHandle.name : 'Nenhuma pasta selecionada';
+        selBtn.textContent     = distribRootHandle ? 'Alterar' : 'Selecionar';
+    }
 
     if (!distribRootHandle || distribSubfolders.length === 0) {
-        config.style.display = 'none';
-        sep.style.display    = 'none';
+        config.style.display  = 'none';
+        sep.style.display     = 'none';
         preview.style.display = 'none';
         execBtn.disabled = true;
         return;
@@ -2669,26 +2901,33 @@ function renderDistribPreview() {
     preview.style.display = '';
 
     const pages = [...tab.selected].sort((a, b) => a - b);
-    const mapped   = [];
-    const unmapped = [];
-    pages.forEach((p, i) => {
-        const folder = distribSubfolders[i];
-        (folder ? mapped : unmapped).push({ page: p, folder });
-    });
+    const ppf   = distribPagesPerFolder;
+    const ext   = distribFormat;
 
-    const ext = distribFormat;
-    list.innerHTML = mapped.map(({ page, folder }) =>
-        `<div class="distrib-preview-item">
-            <span class="distrib-prev-page">Pág. ${realPageNum(tab, page)}</span>
-            <span class="distrib-prev-arrow">→</span>
-            <span class="distrib-prev-folder" title="${folder.name} / ${fname}.${ext}">${folder.name} / ${fname}.${ext}</span>
-        </div>`
-    ).join('') + (unmapped.length
-        ? `<div class="distrib-prev-warn">⚠ ${unmapped.length} página(s) sem pasta correspondente (pastas insuficientes).</div>`
+    // agrupar páginas em chunks de ppf → subpasta
+    const chunks = [];
+    for (let i = 0; i < pages.length; i += ppf) chunks.push(pages.slice(i, i + ppf));
+
+    const mappedChunks   = chunks.filter((_, i) => distribSubfolders[i]);
+    const unmappedChunks = chunks.filter((_, i) => !distribSubfolders[i]);
+    const mappedPages    = mappedChunks.reduce((s, c) => s + c.length, 0);
+
+    list.innerHTML = mappedChunks.map((chunk, i) => {
+        const folder = distribSubfolders[i];
+        return chunk.map((page, j) => {
+            const filePart = ppf > 1 ? `${fname}_${j + 1}.${ext}` : `${fname}.${ext}`;
+            return `<div class="distrib-preview-item">
+                <span class="distrib-prev-page">Pág. ${realPageNum(tab, page)}</span>
+                <span class="distrib-prev-arrow">→</span>
+                <span class="distrib-prev-folder" title="${folder.name}/${filePart}">${folder.name}/${filePart}</span>
+            </div>`;
+        }).join('');
+    }).join('') + (unmappedChunks.length
+        ? `<div class="distrib-prev-warn">⚠ ${unmappedChunks.reduce((s,c)=>s+c.length,0)} página(s) sem pasta correspondente (pastas insuficientes).</div>`
         : '');
 
-    summary.textContent = `${mapped.length} de ${pages.length} página(s)`;
-    execBtn.disabled = mapped.length === 0;
+    summary.textContent = `${mappedPages} de ${pages.length} página(s) → ${mappedChunks.length} pasta(s)`;
+    execBtn.disabled = mappedPages === 0;
 }
 
 async function executeDistrib() {
@@ -2697,14 +2936,26 @@ async function executeDistrib() {
 
     const fname  = document.getElementById('distrib-fname').value.trim() || 'foto';
     const pages  = [...tab.selected].sort((a, b) => a - b);
-    const tasks  = pages.map((p, i) => ({ page: p, folder: distribSubfolders[i] })).filter(t => t.folder);
+    const ppf    = distribPagesPerFolder;
+
+    // agrupar em chunks e montar lista de tarefas planas
+    const tasks = [];
+    for (let ci = 0; ci < pages.length; ci += ppf) {
+        const chunk  = pages.slice(ci, ci + ppf);
+        const folder = distribSubfolders[Math.floor(ci / ppf)];
+        if (!folder) break;
+        chunk.forEach((page, ji) => {
+            const fileName = ppf > 1 ? `${fname}_${ji + 1}` : fname;
+            tasks.push({ page, folder, fileName });
+        });
+    }
 
     document.getElementById('distrib-modal').classList.remove('open');
     showLoader(`Distribuindo ${tasks.length} arquivo(s)...`, 5);
 
     try {
         for (let i = 0; i < tasks.length; i++) {
-            const { page, folder } = tasks[i];
+            const { page, folder, fileName } = tasks[i];
             loaderText.textContent = `Salvando ${i + 1} de ${tasks.length}...`;
             setProgress(5 + ((i + 1) / tasks.length) * 88);
 
@@ -2723,7 +2974,7 @@ async function executeDistrib() {
                 blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
             }
 
-            const fileHandle = await folder.handle.getFileHandle(`${fname}.${distribFormat}`, { create: true });
+            const fileHandle = await folder.handle.getFileHandle(`${fileName}.${distribFormat}`, { create: true });
             const writable   = await fileHandle.createWritable();
             await writable.write(blob);
             await writable.close();
@@ -2763,8 +3014,160 @@ async function restoreDistribHandle() {
         if (perm === 'granted') {
             distribRootHandle = handle;
             await refreshDistribSubfolders();
+            refreshDestRootBar();
+        } else {
+            // permissão expirou mas guardamos o handle para oferecer "Reconectar"
+            distribSavedHandle = handle;
+            refreshDestRootBar();
         }
     } catch (e) { /* silently ignore */ }
+}
+
+// ── Destino por card (via servidor local) ──
+
+var destApiFolders = []; // array de strings com nomes das subpastas
+var destApiRoot    = '';
+
+async function loadFoldersFromAPI() {
+    try {
+        const r = await fetch('/api/folders');
+        if (!r.ok) throw new Error('Servidor não respondeu');
+        const data = await r.json();
+        destApiRoot    = data.root || '';
+        destApiFolders = data.folders || [];
+        refreshDestRootBar();
+        const tab = activeTab();
+        if (tab) { rematchAllDests(tab); rebuildCardDestUIs(tab); updateSaveDestsBtn(); }
+    } catch (e) {
+        // servidor não disponível — modo silencioso
+        destApiRoot    = '';
+        destApiFolders = [];
+        refreshDestRootBar();
+    }
+}
+
+function normKey(name) {
+    let s = name.toLowerCase();
+    s = s.replace(/^(pag|page|pg|p)[\s_\-]*/i, '');
+    s = s.replace(/^0+(?=\d)/, '');
+    return s.trim();
+}
+
+function matchDestFolder(query) {
+    if (!query) return null;
+    const q   = query.trim().toLowerCase();
+    if (!q) return null;
+    const src = destApiFolders.length ? destApiFolders
+              : distribSubfolders.map(f => f.name);
+    // 1. match exato chave normalizada
+    let name = src.find(n => normKey(n) === q);
+    if (!name) name = src.find(n => n.toLowerCase() === q);
+    if (!name) name = src.find(n => normKey(n).startsWith(q));
+    if (!name) name = src.find(n => n.toLowerCase().includes(q));
+    return name || null;
+}
+
+function updateCardDestUI(card, n, tab) {
+    const dest = tab.pageDests?.[n];
+    const ind  = card.querySelector('.card-dest-match');
+    if (!ind) return;
+    if (!dest?.query) { ind.textContent = ''; ind.className = 'card-dest-match'; return; }
+    if (dest.name)    { ind.textContent = dest.name; ind.className = 'card-dest-match ok'; }
+    else              { ind.textContent = '✗'; ind.className = 'card-dest-match err'; }
+}
+
+function updateSaveDestsBtn() {
+    const tab = activeTab();
+    const btn = document.getElementById('btn-save-dests');
+    const lbl = document.getElementById('btn-save-dests-lbl');
+    if (!btn) return;
+    const count = tab ? Object.values(tab.pageDests || {}).filter(d => d.name).length : 0;
+    btn.style.display = count > 0 ? '' : 'none';
+    if (lbl) lbl.textContent = `Salvar ${count}`;
+}
+
+function refreshDestRootBar() {
+    const label = document.getElementById('dest-root-label');
+    const count = document.getElementById('dest-root-count');
+    const btn   = document.getElementById('dest-root-btn');
+    if (!label || !btn) return;
+    if (destApiRoot) {
+        const parts = destApiRoot.replace(/\\/g, '/').split('/');
+        label.textContent = parts[parts.length - 1] || destApiRoot;
+        label.title       = destApiRoot;
+        label.classList.remove('empty');
+        count.textContent = `${destApiFolders.length} pasta(s)`;
+        btn.textContent   = 'Recarregar';
+    } else {
+        label.textContent = 'Servidor não detectado — inicie com: node server.js';
+        label.classList.add('empty');
+        count.textContent = '';
+        btn.textContent   = 'Tentar ligação';
+    }
+}
+
+function rematchAllDests(tab) {
+    if (!tab?.pageDests) return;
+    Object.keys(tab.pageDests).forEach(n => {
+        const d = tab.pageDests[n];
+        if (!d.query) return;
+        const name = matchDestFolder(d.query);
+        d.name = name || null;
+    });
+}
+
+function rebuildCardDestUIs(tab) {
+    pagesGrid.querySelectorAll('.page-card').forEach(card => {
+        const n = parseInt(card.dataset.page);
+        if (tab.pageDests?.[n]) updateCardDestUI(card, n, tab);
+    });
+}
+
+async function saveAllDests() {
+    const tab = activeTab();
+    if (!tab?.pageDests) return;
+    const tasks = Object.entries(tab.pageDests)
+        .filter(([, d]) => d.name)
+        .map(([page, d]) => ({ page: parseInt(page), folder: d.name, isPriority: !!d.isPriority }));
+    if (!tasks.length) return;
+
+    showLoader(`Salvando ${tasks.length} arquivo(s)...`, 5);
+    let saved = 0;
+    try {
+        for (let i = 0; i < tasks.length; i++) {
+            const { page, folder } = tasks[i];
+            loaderText.textContent = `Salvando em "${folder}" (${i + 1}/${tasks.length})...`;
+            setProgress(5 + ((i + 1) / tasks.length) * 88);
+
+            const canvas = await renderErasedPageCanvas(tab, page);
+            const blob   = await new Promise(res => canvas.toBlob(res, 'image/png'));
+
+            // converter blob para base64
+            const base64 = await new Promise((res, rej) => {
+                const reader = new FileReader();
+                reader.onload  = () => res(reader.result.split(',')[1]);
+                reader.onerror = rej;
+                reader.readAsDataURL(blob);
+            });
+
+            const filename = isPriority ? 'capa.png' : 'foto.png';
+            const r = await fetch('/api/save', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ folder, filename, data: base64 })
+            });
+            const result = await r.json();
+            if (!r.ok) throw new Error(result.error || `HTTP ${r.status}`);
+            markPage(tab, page);
+            saved++;
+        }
+        hideLoader();
+        toast(`✓ ${saved} arquivo(s) salvos nos destinos!`);
+    } catch (err) {
+        hideLoader();
+        toast(`Erro ao salvar: ${err.message}`);
+        console.error('[saveAllDests]', err);
+    }
 }
 
 // ── Loader ──
@@ -3469,7 +3872,37 @@ const galleryBadge  = document.getElementById('gallery-badge');
 document.getElementById('gallery-backdrop').addEventListener('click', closeGallery);
 document.getElementById('gal-close').addEventListener('click', closeGallery);
 galleryBtnEl.addEventListener('click', openGallery);
-document.getElementById('gal-save-all').addEventListener('click', () => { galleryItems.forEach(galSave); });
+document.getElementById('gal-save-all').addEventListener('click', async () => {
+    if (!galleryItems.length) return;
+
+    const withDest    = galleryItems.filter(i => i.destName && destApiRoot);
+    const withoutDest = galleryItems.filter(i => !(i.destName && destApiRoot));
+
+    if (!withDest.length) {
+        // nenhum destino definido — comportamento antigo (download tudo)
+        galleryItems.forEach(i => galSave(i));
+        return;
+    }
+
+    showLoader(`Salvando ${withDest.length} recorte(s)...`, 5);
+    try {
+        for (let i = 0; i < withDest.length; i++) {
+            const item = withDest[i];
+            loaderText.textContent = `Salvando "${galDestFilename(item)}" em "${item.destName}" (${i + 1}/${withDest.length})...`;
+            setProgress(5 + ((i + 1) / withDest.length) * 88);
+            await galSave(item, true);
+        }
+        hideLoader();
+        // itens sem destino ainda fazem download normal
+        withoutDest.forEach(i => galSave(i, true));
+        const extra = withoutDest.length ? ` + ${withoutDest.length} download(s) sem destino` : '';
+        toast(`✓ ${withDest.length} recorte(s) salvos${extra}!`);
+    } catch (e) {
+        hideLoader();
+        toast('Erro ao salvar recortes.');
+        console.error('[gal-save-all]', e);
+    }
+});
 document.getElementById('gal-discard-all').addEventListener('click', () => {
     galleryItems = [];
     renderGallery();
@@ -3496,23 +3929,58 @@ function updateGalleryBadge() {
     galleryBtnEl.classList.toggle('has-items', galleryItems.length > 0);
 }
 
-async function galSave(item) {
+function galDestFilename(item) {
     const rp = item.realPage ?? item.page;
+    if (!item.destName) return `recorte pag ${rp}.png`;
+    if (item.isPriority)  return 'capa.png';
+    // vários recortes não-capa na mesma página e pasta → numera
+    const siblings = galleryItems.filter(i =>
+        i.destName === item.destName && (i.realPage ?? i.page) === rp && !i.isPriority
+    );
+    if (siblings.length <= 1) return `recorte pag ${rp}.png`;
+    const pos = siblings.indexOf(item);
+    return `recorte pag ${rp}_${pos + 1}.png`;
+}
+
+async function galSave(item, silent = false) {
+    const rp = item.realPage ?? item.page;
+
+    // ── Modo destino por pasta (API) ──
+    if (item.destName && destApiRoot) {
+        try {
+            const base64 = item.dataURL.split(',')[1];
+            const fname  = galDestFilename(item);
+            const r = await fetch('/api/save', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ folder: item.destName, filename: fname, data: base64 })
+            });
+            const result = await r.json();
+            if (!r.ok) throw new Error(result.error || `HTTP ${r.status}`);
+            if (!silent) toast(`✓ Salvo em "${item.destName}/${fname}"`);
+        } catch (e) {
+            toast(`Erro ao salvar: ${e.message}`);
+            console.error('[galSave API]', e);
+        }
+        return;
+    }
+
+    // ── Modo catálogo ──
     if (catImagesDirHandle) {
-        // ── Modo catálogo: salva recorte direto na pasta do catálogo ──
         const fileName = `pag recorte ${rp}.png`;
-        const res = await fetch(item.dataURL);
+        const res  = await fetch(item.dataURL);
         const blob = await res.blob();
         await catWriteFile(fileName, blob);
-        toast(`✓ Recorte salvo no catálogo: ${fileName}`);
+        if (!silent) toast(`✓ Recorte salvo no catálogo: ${fileName}`);
         catSync();
-    } else {
-        // ── Modo padrão: download no browser ──
-        const a = document.createElement('a');
-        a.href     = item.dataURL;
-        a.download = `${item.shortName} recorte pag ${rp}.png`;
-        a.click();
+        return;
     }
+
+    // ── Modo padrão: download no browser ──
+    const a = document.createElement('a');
+    a.href     = item.dataURL;
+    a.download = `${item.shortName} recorte pag ${rp}.png`;
+    a.click();
 }
 
 function galDiscard(id) {
@@ -3535,11 +4003,47 @@ function renderGallery() {
                 <div class="gal-info-file">${item.fileName}</div>
                 <div class="gal-info-meta">Pág. ${item.page} · ${item.w}×${item.h} px</div>
             </div>
+            <div class="gal-dest">
+                <input class="gal-dest-input" type="text" placeholder="→ pasta (ex: 6, 8b)" autocomplete="off"
+                    value="${item.destQuery || ''}">
+                <span class="gal-dest-match ${item.destName ? 'ok' : ''}">${item.destName || ''}</span>
+            </div>
             <div class="gal-actions">
+                <button class="gal-btn priority${item.isPriority ? ' active' : ''}" title="Marcar como capa desta pasta">★ Capa</button>
                 <button class="gal-btn save">Salvar</button>
                 <button class="gal-btn discard">Descartar</button>
             </div>`;
         el.querySelector('.gal-thumb-wrap img').addEventListener('click', () => galLbOpen(idx));
+
+        const galDestInput = el.querySelector('.gal-dest-input');
+        const galDestMatch = el.querySelector('.gal-dest-match');
+        const galPrioBtn   = el.querySelector('.gal-btn.priority');
+
+        galDestInput.addEventListener('input', e => {
+            const q    = e.target.value.trim();
+            const name = q ? matchDestFolder(q) : null;
+            item.destQuery = q;
+            item.destName  = name || null;
+            if (!name) item.isPriority = false;
+            galDestMatch.textContent = name || (q ? '✗' : '');
+            galDestMatch.className   = 'gal-dest-match' + (name ? ' ok' : (q ? ' err' : ''));
+            galPrioBtn.classList.toggle('active', !!item.isPriority);
+        });
+
+        galPrioBtn.addEventListener('click', () => {
+            if (!item.destName) { toast('Define primeiro o destino da pasta.'); return; }
+            const isNowPriority = !item.isPriority;
+            // desativa prioridade de outros itens da galeria com o mesmo destino
+            // desativa outros com o mesmo destino
+            galleryItems.forEach(other => {
+                if (other.id !== item.id && other.destName === item.destName) {
+                    other.isPriority = false;
+                }
+            });
+            item.isPriority = isNowPriority;
+            renderGallery(); // re-renderiza com estrelas atualizadas
+        });
+
         el.querySelector('.save').addEventListener('click', () => galSave(item));
         el.querySelector('.discard').addEventListener('click', () => galDiscard(item.id));
         galleryGrid.appendChild(el);
@@ -3788,6 +4292,7 @@ async function catSync() {
 workerReady.then(restoreState);
 applyGridView();
 restoreDistribHandle();
+loadFoldersFromAPI();
 
 // ── Utils ──
 function fmtBytes(b) {
