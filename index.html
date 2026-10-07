@@ -2556,10 +2556,15 @@ function pageHasErase(tab, n) {
 }
 
 function applyEraseToCanvas(ctx, tab, n, w, h) {
-    if (!tab.eraseStrokes?.[n]) return;
+    if (!tab.eraseStrokes?.[n]?.length) return;
     const maxDim = Math.max(w, h);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
     for (const session of tab.eraseStrokes[n]) {
         const pts = session.pts ?? session;
+        if (!pts.length) continue;
         ctx.fillStyle = session.color ?? '#ffffff';
         for (const pt of pts) {
             if (pt.type === 'rect') {
@@ -2571,6 +2576,7 @@ function applyEraseToCanvas(ctx, tab, n, w, h) {
             }
         }
     }
+    ctx.restore();
 }
 
 async function renderErasedPageCanvas(tab, n) {
@@ -2614,6 +2620,10 @@ async function renderErasedPageCanvas(tab, n) {
         }
         if (lastErr) throw lastErr;
     }
+    // Reset any transform/compositing state left by PDF.js before applying erases
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
     applyEraseToCanvas(ctx, tab, n, canvas.width, canvas.height);
     await applyInsertedImages(ctx, tab, n, canvas.width, canvas.height);
     return canvas;
