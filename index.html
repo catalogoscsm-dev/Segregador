@@ -714,6 +714,8 @@
 
         /* ── Zoom Modal — crop mode ── */
         #zm-scissors { margin-left: 0.25rem; }
+        #zm-scissors-cover { color: #fbbf24; }
+        #zm-scissors-cover.active { border-color: #fbbf24 !important; color: #fbbf24 !important; background: rgba(251,191,36,0.14) !important; }
         #zm-scissors.active { border-color: #16a34a !important; color: #4ade80 !important; background: rgba(22,163,74,0.12) !important; }
 
         #zoom-img-box { position: relative; display: inline-block; line-height: 0; }
@@ -1465,6 +1467,10 @@
                 <button class="zm-btn" id="zm-scissors" title="Recortar área (C)">
                     <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
                 </button>
+                <button class="zm-btn" id="zm-scissors-cover" title="Recorte de capa — fica salvo como capa.png (V)">
+                    <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+                    <span style="font-size:0.8rem;margin-left:2px">★</span>
+                </button>
                 <button class="zm-btn" id="zm-eraser" title="Borracha — pincel (E)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.707 5.826l-3.535-3.533a1 1 0 0 0-1.414 0L2.929 15.293A1 1 0 0 0 2.636 16l.607 3.63a1 1 0 0 0 .987.807l3.63-.607a1 1 0 0 0 .535-.293L20.707 7.24a1 1 0 0 0 0-1.414z"/><line x1="2" y1="22" x2="22" y2="22"/></svg>
                 </button>
@@ -1875,7 +1881,7 @@ var dragSrcPage = null;
 
 // ── Zoom / crop / eraser state (declarados cedo para evitar TDZ) ──
 var zm         = { tab: null, page: 1, zoom: 1, naturalW: 1, naturalH: 1 };
-var crop       = { drawing: false, x0: 0, y0: 0 };
+var crop       = { drawing: false, x0: 0, y0: 0, cover: false };
 var eraserSzIdx = 1;
 var eraserColor = '#ffffff';
 var eraser     = { painting: false, get size() { return [0.012, 0.025, 0.045, 0.075][eraserSzIdx]; } };
@@ -3135,7 +3141,7 @@ async function saveAllDests() {
     let saved = 0;
     try {
         for (let i = 0; i < tasks.length; i++) {
-            const { page, folder } = tasks[i];
+            const { page, folder, isPriority } = tasks[i];
             loaderText.textContent = `Salvando em "${folder}" (${i + 1}/${tasks.length})...`;
             setProgress(5 + ((i + 1) / tasks.length) * 88);
 
@@ -3193,6 +3199,7 @@ const zmPrevBtn  = document.getElementById('zm-prev');
 const zmNextBtn  = document.getElementById('zm-next');
 const cropCanvas    = document.getElementById('crop-canvas');
 const zmScissors    = document.getElementById('zm-scissors');
+const zmScissorsCover = document.getElementById('zm-scissors-cover');
 const eraseCanvas   = document.getElementById('erase-canvas');
 const insertCanvas  = document.getElementById('insert-canvas');
 const zmEraser      = document.getElementById('zm-eraser');
@@ -3245,7 +3252,8 @@ document.getElementById('zm-out').addEventListener('click', () => zoomStep(1 / 1
 document.getElementById('zm-fit').addEventListener('click', zoomFit);
 zmPrevBtn.addEventListener('click', () => zmNavPage(-1));
 zmNextBtn.addEventListener('click', () => zmNavPage(1));
-zmScissors.addEventListener('click', toggleCropMode);
+zmScissors.addEventListener('click', () => toggleCropMode(false));
+zmScissorsCover.addEventListener('click', () => toggleCropMode(true));
 
 zoomScroll.addEventListener('wheel', e => {
     if (zoomModal.classList.contains('crop-mode'))      return;
@@ -3276,7 +3284,8 @@ document.addEventListener('keydown', e => {
     if (e.key === '+' || e.key === '=')                   zoomStep(1.25);
     if (e.key === '-')                                    zoomStep(1 / 1.25);
     if (e.key === '0')                                    zoomFit();
-    if (e.key === 'c' || e.key === 'C') toggleCropMode();
+    if (e.key === 'c' || e.key === 'C') toggleCropMode(false);
+    if (e.key === 'v' || e.key === 'V') toggleCropMode(true);
     if (e.key === 'e' || e.key === 'E') toggleEraseMode();
     if (e.key === 'r' || e.key === 'R') enterEraseRectMode();
     if ((e.key === 'i' || e.key === 'I') && lastCrop) { if (zoomModal.classList.contains('insert-mode')) exitInsertMode(); else enterInsertMode(); }
@@ -3415,21 +3424,25 @@ function syncCropCanvas() {
     redrawInsertCanvas();
 }
 
-function toggleCropMode() {
-    if (zoomModal.classList.contains('crop-mode')) exitCropMode();
-    else enterCropMode();
+function toggleCropMode(cover = false) {
+    // clicar no mesmo botão sai do modo; clicar no outro troca o tipo de recorte
+    if (zoomModal.classList.contains('crop-mode') && crop.cover === cover) exitCropMode();
+    else enterCropMode(cover);
 }
 
-function enterCropMode() {
+function enterCropMode(cover = false) {
     exitAllEraseModes();
     syncCropCanvas();
+    crop.cover = cover;
     zoomModal.classList.add('crop-mode');
-    zmScissors.classList.add('active');
+    zmScissors.classList.toggle('active', !cover);
+    zmScissorsCover.classList.toggle('active', cover);
 }
 
 function exitCropMode() {
     zoomModal.classList.remove('crop-mode');
     zmScissors.classList.remove('active');
+    zmScissorsCover.classList.remove('active');
     crop.drawing = false;
     const ctx = cropCanvas.getContext('2d');
     ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
@@ -3844,6 +3857,9 @@ async function performCrop(rx, ry, rw, rh) {
     out.getContext('2d').drawImage(full, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
     const cropDataURL = out.toDataURL('image/png');
+    const isCover = crop.cover;
+    // herda o destino já definido no card da página (se existir)
+    const pageDest = tab.pageDests?.[n];
     galleryAdd({
         id:       `crop_${Date.now()}`,
         dataURL:  cropDataURL,
@@ -3851,14 +3867,19 @@ async function performCrop(rx, ry, rw, rh) {
         shortName:tab.shortName,
         page:     n,
         realPage: realPageNum(tab, n),
-        w: srcW, h: srcH
+        w: srcW, h: srcH,
+        destQuery: pageDest?.name ? pageDest.query : '',
+        destName:  pageDest?.name || null,
+        isPriority: isCover
     });
     // Store for optional insertion into the page
     lastCrop = { dataURL: cropDataURL, normW: srcW / hd.w, normH: srcH / hd.h };
     _getInsertImg(cropDataURL, () => {}); // preload into cache for smooth preview
     _syncInsertControls();
     markPage(tab, n);
-    toast('✂ Recorte adicionado à galeria! Clique em ⊞ para inserir na página.');
+    toast(isCover
+        ? '★ Recorte de capa adicionado à galeria!'
+        : '✂ Recorte adicionado à galeria! Clique em ⊞ para inserir na página.');
 }
 
 // ── Gallery ──
@@ -3919,7 +3940,16 @@ function closeGallery() {
     document.body.style.overflow = '';
 }
 
+// só pode haver uma capa por pasta: desmarca as outras da galeria com o mesmo destino
+function galClearOtherCovers(item) {
+    if (!item.isPriority || !item.destName) return;
+    galleryItems.forEach(other => {
+        if (other.id !== item.id && other.destName === item.destName) other.isPriority = false;
+    });
+}
+
 function galleryAdd(item) {
+    galClearOtherCovers(item);
     galleryItems.push(item);
     updateGalleryBadge();
 }
@@ -3931,7 +3961,7 @@ function updateGalleryBadge() {
 
 function galDestFilename(item) {
     const rp = item.realPage ?? item.page;
-    if (!item.destName) return `recorte pag ${rp}.png`;
+    if (!item.destName) return `${item.isPriority ? 'capa' : 'recorte'} pag ${rp}.png`;
     if (item.isPriority)  return 'capa.png';
     // vários recortes não-capa na mesma página e pasta → numera
     const siblings = galleryItems.filter(i =>
@@ -3979,7 +4009,7 @@ async function galSave(item, silent = false) {
     // ── Modo padrão: download no browser ──
     const a = document.createElement('a');
     a.href     = item.dataURL;
-    a.download = `${item.shortName} recorte pag ${rp}.png`;
+    a.download = `${item.shortName} ${item.isPriority ? 'capa' : 'recorte'} pag ${rp}.png`;
     a.click();
 }
 
@@ -4000,7 +4030,7 @@ function renderGallery() {
         el.innerHTML = `
             <div class="gal-thumb-wrap"><img src="${item.dataURL}" alt="Recorte pág ${item.page}"></div>
             <div class="gal-info">
-                <div class="gal-info-file">${item.fileName}</div>
+                <div class="gal-info-file">${item.fileName}${item.isPriority ? '<span class="gal-capa-badge">★ CAPA</span>' : ''}</div>
                 <div class="gal-info-meta">Pág. ${item.page} · ${item.w}×${item.h} px</div>
             </div>
             <div class="gal-dest">
@@ -4025,6 +4055,7 @@ function renderGallery() {
             item.destQuery = q;
             item.destName  = name || null;
             if (!name) item.isPriority = false;
+            else galClearOtherCovers(item);
             galDestMatch.textContent = name || (q ? '✗' : '');
             galDestMatch.className   = 'gal-dest-match' + (name ? ' ok' : (q ? ' err' : ''));
             galPrioBtn.classList.toggle('active', !!item.isPriority);
