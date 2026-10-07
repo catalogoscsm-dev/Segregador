@@ -3870,7 +3870,8 @@ async function performCrop(rx, ry, rw, rh) {
         w: srcW, h: srcH,
         destQuery: pageDest?.name ? pageDest.query : '',
         destName:  pageDest?.name || null,
-        isPriority: isCover
+        isPriority: isCover,
+        wasCover:  isCover
     });
     // Store for optional insertion into the page
     lastCrop = { dataURL: cropDataURL, normW: srcW / hd.w, normH: srcH / hd.h };
@@ -3961,8 +3962,9 @@ function updateGalleryBadge() {
 
 function galDestFilename(item) {
     const rp = item.realPage ?? item.page;
-    if (!item.destName) return `${item.isPriority ? 'capa' : 'recorte'} pag ${rp}.png`;
-    if (item.isPriority)  return 'capa.png';
+    const isCapa = item.wasCover || item.isPriority;
+    if (!item.destName) return `${isCapa ? 'capa' : 'recorte'} pag ${rp}.png`;
+    if (isCapa) return 'capa.png';
     // vários recortes não-capa na mesma página e pasta → numera
     const siblings = galleryItems.filter(i =>
         i.destName === item.destName && (i.realPage ?? i.page) === rp && !i.isPriority
@@ -3997,7 +3999,7 @@ async function galSave(item, silent = false) {
 
     // ── Modo catálogo ──
     if (catImagesDirHandle) {
-        const fileName = `pag ${item.isPriority ? 'capa' : 'recorte'} ${rp}.png`;
+        const fileName = `pag ${(item.wasCover || item.isPriority) ? 'capa' : 'recorte'} ${rp}.png`;
         const res  = await fetch(item.dataURL);
         const blob = await res.blob();
         await catWriteFile(fileName, blob);
@@ -4009,7 +4011,7 @@ async function galSave(item, silent = false) {
     // ── Modo padrão: download no browser ──
     const a = document.createElement('a');
     a.href     = item.dataURL;
-    a.download = `${item.shortName} ${item.isPriority ? 'capa' : 'recorte'} pag ${rp}.png`;
+    a.download = `${item.shortName} ${(item.wasCover || item.isPriority) ? 'capa' : 'recorte'} pag ${rp}.png`;
     a.click();
 }
 
