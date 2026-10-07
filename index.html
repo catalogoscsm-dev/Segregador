@@ -978,10 +978,19 @@
         .gal-btn.priority { border-color: rgba(251,191,36,0.2); color: var(--text-3); font-size: 0.7rem; }
         .gal-btn.priority:hover { border-color: rgba(251,191,36,0.5); color: #fbbf24; background: rgba(251,191,36,0.08); }
         .gal-btn.priority.active { border-color: rgba(251,191,36,0.6); color: #fbbf24; background: rgba(251,191,36,0.12); font-weight: 700; }
+        .gal-btn.ficha { border-color: rgba(56,189,248,0.2); color: var(--text-3); font-size: 0.7rem; }
+        .gal-btn.ficha:hover { border-color: rgba(56,189,248,0.5); color: #38bdf8; background: rgba(56,189,248,0.08); }
+        .gal-btn.ficha.active { border-color: rgba(56,189,248,0.6); color: #38bdf8; background: rgba(56,189,248,0.12); font-weight: 700; }
         .gal-capa-badge {
             display: inline-block; font-size: 0.6rem; font-weight: 700;
             background: rgba(251,191,36,0.18); color: #fbbf24;
             border: 1px solid rgba(251,191,36,0.4); border-radius: 4px;
+            padding: 0 0.3rem; margin-left: 0.3rem; vertical-align: middle; letter-spacing: 0.04em;
+        }
+        .gal-ficha-badge {
+            display: inline-block; font-size: 0.6rem; font-weight: 700;
+            background: rgba(56,189,248,0.15); color: #38bdf8;
+            border: 1px solid rgba(56,189,248,0.4); border-radius: 4px;
             padding: 0 0.3rem; margin-left: 0.3rem; vertical-align: middle; letter-spacing: 0.04em;
         }
         /* prioridade/capa nos cards */
@@ -4106,11 +4115,19 @@ function closeGallery() {
     document.body.style.overflow = '';
 }
 
-// só pode haver uma capa por pasta: desmarca as outras da galeria com o mesmo destino
+// só pode haver uma capa por pasta
 function galClearOtherCovers(item) {
     if (!item.isPriority || !item.destName) return;
     galleryItems.forEach(other => {
         if (other.id !== item.id && other.destName === item.destName) other.isPriority = false;
+    });
+}
+
+// só pode haver uma ficha tecnica por pasta
+function galClearOtherFichas(item) {
+    if (!item.isFichaTecnica || !item.destName) return;
+    galleryItems.forEach(other => {
+        if (other.id !== item.id && other.destName === item.destName) other.isFichaTecnica = false;
     });
 }
 
@@ -4127,12 +4144,17 @@ function updateGalleryBadge() {
 
 function galDestFilename(item) {
     const rp = item.realPage ?? item.page;
-    const isCapa = item.wasCover || item.isPriority;
-    if (!item.destName) return `${isCapa ? 'capa' : 'recorte'} pag ${rp}.png`;
-    if (isCapa) return 'capa.png';
-    // vários recortes não-capa na mesma página e pasta → numera
+    const isCapa  = item.wasCover || item.isPriority;
+    const isFicha = item.isFichaTecnica;
+    if (!item.destName) {
+        const label = isCapa ? 'capa' : isFicha ? 'ficha tecn' : 'recorte';
+        return `${label} pag ${rp}.png`;
+    }
+    if (isCapa)  return 'capa.png';
+    if (isFicha) return 'ficha tecn.png';
+    // vários recortes normais na mesma página e pasta → numera
     const siblings = galleryItems.filter(i =>
-        i.destName === item.destName && (i.realPage ?? i.page) === rp && !i.isPriority
+        i.destName === item.destName && (i.realPage ?? i.page) === rp && !i.isPriority && !i.isFichaTecnica
     );
     if (siblings.length <= 1) return `recorte pag ${rp}.png`;
     const pos = siblings.indexOf(item);
@@ -4164,7 +4186,10 @@ async function galSave(item, silent = false) {
 
     // ── Modo catálogo ──
     if (catImagesDirHandle) {
-        const fileName = `pag ${(item.wasCover || item.isPriority) ? 'capa' : 'recorte'} ${rp}.png`;
+        const isCapa  = item.wasCover || item.isPriority;
+        const isFicha = item.isFichaTecnica;
+        const label   = isCapa ? 'capa' : isFicha ? 'ficha tecn' : 'recorte';
+        const fileName = `pag ${label} ${rp}.png`;
         const res  = await fetch(item.dataURL);
         const blob = await res.blob();
         await catWriteFile(fileName, blob);
@@ -4174,9 +4199,12 @@ async function galSave(item, silent = false) {
     }
 
     // ── Modo padrão: download no browser ──
+    const isCapa  = item.wasCover || item.isPriority;
+    const isFicha = item.isFichaTecnica;
+    const label   = isCapa ? 'capa' : isFicha ? 'ficha tecn' : 'recorte';
     const a = document.createElement('a');
     a.href     = item.dataURL;
-    a.download = `${item.shortName} ${(item.wasCover || item.isPriority) ? 'capa' : 'recorte'} pag ${rp}.png`;
+    a.download = `${item.shortName} ${label} pag ${rp}.png`;
     a.click();
 }
 
@@ -4194,10 +4222,12 @@ function renderGallery() {
     galleryItems.forEach((item, idx) => {
         const el = document.createElement('div');
         el.className = 'gal-item';
+        const capaBadge  = item.isPriority     ? '<span class="gal-capa-badge">★ CAPA</span>'       : '';
+        const fichaBadge = item.isFichaTecnica ? '<span class="gal-ficha-badge">📋 FICHA TECN</span>' : '';
         el.innerHTML = `
             <div class="gal-thumb-wrap"><img src="${item.dataURL}" alt="Recorte pág ${item.page}"></div>
             <div class="gal-info">
-                <div class="gal-info-file">${item.fileName}${item.isPriority ? '<span class="gal-capa-badge">★ CAPA</span>' : ''}</div>
+                <div class="gal-info-file">${item.fileName}${capaBadge}${fichaBadge}</div>
                 <div class="gal-info-meta">Pág. ${item.page} · ${item.w}×${item.h} px</div>
             </div>
             <div class="gal-dest">
@@ -4206,7 +4236,8 @@ function renderGallery() {
                 <span class="gal-dest-match ${item.destName ? 'ok' : ''}">${item.destName || ''}</span>
             </div>
             <div class="gal-actions">
-                <button class="gal-btn priority${item.isPriority ? ' active' : ''}" title="Marcar como capa desta pasta">★ Capa</button>
+                <button class="gal-btn priority${item.isPriority     ? ' active' : ''}" title="Marcar como capa desta pasta">★ Capa</button>
+                <button class="gal-btn ficha${item.isFichaTecnica   ? ' active' : ''}" title="Marcar como ficha técnica desta pasta">📋 Ficha</button>
                 <button class="gal-btn save">Salvar</button>
                 <button class="gal-btn discard">Descartar</button>
             </div>`;
@@ -4215,31 +4246,41 @@ function renderGallery() {
         const galDestInput = el.querySelector('.gal-dest-input');
         const galDestMatch = el.querySelector('.gal-dest-match');
         const galPrioBtn   = el.querySelector('.gal-btn.priority');
+        const galFichaBtn  = el.querySelector('.gal-btn.ficha');
 
         galDestInput.addEventListener('input', e => {
             const q    = e.target.value.trim();
             const name = q ? matchDestFolder(q) : null;
             item.destQuery = q;
             item.destName  = name || null;
-            if (!name) item.isPriority = false;
-            else galClearOtherCovers(item);
+            if (!name) { item.isPriority = false; item.isFichaTecnica = false; }
+            else { galClearOtherCovers(item); galClearOtherFichas(item); }
             galDestMatch.textContent = name || (q ? '✗' : '');
             galDestMatch.className   = 'gal-dest-match' + (name ? ' ok' : (q ? ' err' : ''));
-            galPrioBtn.classList.toggle('active', !!item.isPriority);
+            galPrioBtn.classList.toggle('active',  !!item.isPriority);
+            galFichaBtn.classList.toggle('active', !!item.isFichaTecnica);
         });
 
         galPrioBtn.addEventListener('click', () => {
             if (!item.destName) { toast('Define primeiro o destino da pasta.'); return; }
             const isNowPriority = !item.isPriority;
-            // desativa prioridade de outros itens da galeria com o mesmo destino
-            // desativa outros com o mesmo destino
             galleryItems.forEach(other => {
-                if (other.id !== item.id && other.destName === item.destName) {
-                    other.isPriority = false;
-                }
+                if (other.id !== item.id && other.destName === item.destName) other.isPriority = false;
             });
             item.isPriority = isNowPriority;
-            renderGallery(); // re-renderiza com estrelas atualizadas
+            if (isNowPriority) item.isFichaTecnica = false; // capa e ficha são exclusivos
+            renderGallery();
+        });
+
+        galFichaBtn.addEventListener('click', () => {
+            if (!item.destName) { toast('Define primeiro o destino da pasta.'); return; }
+            const isNowFicha = !item.isFichaTecnica;
+            galleryItems.forEach(other => {
+                if (other.id !== item.id && other.destName === item.destName) other.isFichaTecnica = false;
+            });
+            item.isFichaTecnica = isNowFicha;
+            if (isNowFicha) item.isPriority = false; // ficha e capa são exclusivos
+            renderGallery();
         });
 
         el.querySelector('.save').addEventListener('click', () => galSave(item));
