@@ -505,6 +505,56 @@
         }
         .btn-dl-distrib:hover { transform: translateY(-2px); box-shadow: 0 8px 35px rgba(5,150,105,0.5); }
 
+        /* ── Trocar Pasta Modal ── */
+        #switch-modal {
+            display: none; position: fixed; inset: 0; z-index: 900;
+            background: rgba(7,7,14,0.80); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center;
+        }
+        #switch-modal.open { display: flex; }
+        .switch-box {
+            background: var(--bg-2); border: 1px solid var(--border);
+            border-radius: 16px; width: 420px; max-width: 96vw;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.7); overflow: hidden;
+            animation: zmPanelIn 0.2s ease;
+        }
+        .switch-head {
+            display: flex; align-items: center; padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border); background: var(--bg-card);
+            gap: 0.6rem;
+        }
+        .switch-head-title { font-weight: 700; font-size: 0.95rem; flex: 1; }
+        .switch-head-close {
+            background: none; border: none; cursor: pointer; color: var(--text-2);
+            width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+            border-radius: 6px; padding: 0;
+        }
+        .switch-head-close:hover { background: var(--bg-card-h); color: var(--text); }
+        .switch-body { padding: 0.75rem 1rem; max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; scrollbar-width: thin; }
+        .switch-item {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.5rem 0.7rem; border-radius: 9px; cursor: pointer;
+            border: 1px solid transparent; transition: all 0.15s;
+            font-size: 0.83rem; color: var(--text-2);
+        }
+        .switch-item:hover { background: var(--bg-card-h); border-color: var(--border); color: var(--text); }
+        .switch-item.active { background: var(--sel-bg); border-color: var(--sel-border); color: var(--text); font-weight: 600; }
+        .switch-item.current { border-color: rgba(22,163,74,0.35); background: rgba(22,163,74,0.06); color: #4ade80; font-weight: 600; }
+        .switch-item-icon { font-size: 1rem; flex-shrink: 0; }
+        .switch-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .switch-item-badge {
+            font-size: 0.65rem; font-weight: 700; padding: 0.08rem 0.35rem;
+            border-radius: 4px; flex-shrink: 0; letter-spacing: 0.03em;
+        }
+        .switch-item-badge.current { background: rgba(22,163,74,0.2); color: #4ade80; border: 1px solid rgba(22,163,74,0.35); }
+        .switch-item-badge.no-img   { background: rgba(255,255,255,0.06); color: var(--text-3); border: 1px solid var(--border); }
+        .switch-footer {
+            display: flex; gap: 0.5rem; padding: 0.9rem 1.25rem;
+            border-top: 1px solid var(--border); background: var(--bg-card);
+            justify-content: flex-end;
+        }
+        #switch-loading { padding: 1.5rem; text-align: center; font-size: 0.82rem; color: var(--text-3); }
+
         /* ── Distribuição Modal ── */
         #distrib-modal {
             display: none; position: fixed; inset: 0; z-index: 800;
@@ -1335,6 +1385,7 @@
         <span id="dest-root-label" class="empty">Pasta raiz não definida — define para ativar destino por card</span>
         <span id="dest-root-count"></span>
         <button class="cp-btn primary" id="dest-root-btn" style="font-size:0.75rem;padding:0.22rem 0.6rem;">Definir</button>
+        <button class="cp-btn danger" id="dest-root-change-btn" style="font-size:0.75rem;padding:0.22rem 0.6rem;display:none;" title="Trocar para outra pasta/fornecedor">Trocar</button>
     </div>
 
     <!-- Pages Grid -->
@@ -1510,6 +1561,26 @@
                 </div>
             </div>
             <button class="zm-nav" id="zm-next" title="Próxima página (→)">&#8250;</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Trocar Pasta/Fornecedor Modal ── -->
+<div id="switch-modal">
+    <div class="switch-box">
+        <div class="switch-head">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span class="switch-head-title">Trocar Pasta / Fornecedor</span>
+            <button class="switch-head-close" id="switch-close">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="switch-body" id="switch-body">
+            <div id="switch-loading">A carregar catálogos...</div>
+        </div>
+        <div class="switch-footer">
+            <button class="distrib-btn distrib-btn-cancel" id="switch-cancel">Cancelar</button>
+            <button class="distrib-btn distrib-btn-exec" id="switch-confirm" disabled>Trocar</button>
         </div>
     </div>
 </div>
@@ -1998,6 +2069,87 @@ document.getElementById('dest-root-btn').addEventListener('click', () => {
         if (destApiRoot) toast(`✓ ${destApiFolders.length} pastas carregadas de: ${destApiRoot.split('\\').pop()}`);
         else toast('Servidor não encontrado. Inicie com: node server.js');
     });
+});
+
+// ── Modal Trocar Pasta ────────────────────────────────────────────────────────
+
+let switchSelectedRoot = null;
+
+async function openSwitchModal() {
+    switchSelectedRoot = null;
+    const modal   = document.getElementById('switch-modal');
+    const body    = document.getElementById('switch-body');
+    const confirm = document.getElementById('switch-confirm');
+    confirm.disabled = true;
+    body.innerHTML = '<div id="switch-loading">A carregar catálogos...</div>';
+    modal.classList.add('open');
+    try {
+        const r    = await fetch('/api/catalogs');
+        const data = await r.json();
+        body.innerHTML = '';
+        if (!data.catalogs || !data.catalogs.length) {
+            body.innerHTML = '<div id="switch-loading">Nenhum catálogo encontrado.</div>';
+            return;
+        }
+        data.catalogs.forEach(cat => {
+            const item = document.createElement('div');
+            item.className = 'switch-item' + (cat.current ? ' current' : '');
+            item.dataset.root = cat.root;
+            item.innerHTML = `
+                <span class="switch-item-icon">${cat.current ? '✓' : '📁'}</span>
+                <span class="switch-item-name">${cat.name}</span>
+                ${cat.current
+                    ? '<span class="switch-item-badge current">atual</span>'
+                    : !cat.hasImagens
+                        ? '<span class="switch-item-badge no-img">sem imagens</span>'
+                        : ''}
+            `;
+            if (!cat.current) {
+                item.addEventListener('click', () => {
+                    body.querySelectorAll('.switch-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    switchSelectedRoot = cat.root;
+                    confirm.disabled = false;
+                });
+            }
+            body.appendChild(item);
+        });
+    } catch (e) {
+        body.innerHTML = `<div id="switch-loading" style="color:#f87171">Erro ao carregar: ${e.message}</div>`;
+    }
+}
+
+document.getElementById('dest-root-change-btn').addEventListener('click', openSwitchModal);
+document.getElementById('switch-close').addEventListener('click',  () => document.getElementById('switch-modal').classList.remove('open'));
+document.getElementById('switch-cancel').addEventListener('click', () => document.getElementById('switch-modal').classList.remove('open'));
+
+document.getElementById('switch-confirm').addEventListener('click', async () => {
+    if (!switchSelectedRoot) return;
+    const modal   = document.getElementById('switch-modal');
+    const confirm = document.getElementById('switch-confirm');
+    confirm.disabled = true;
+    confirm.textContent = 'Trocando...';
+    try {
+        const r    = await fetch('/api/set-root', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ root: switchSelectedRoot })
+        });
+        const data = await r.json();
+        if (!r.ok) { toast('Erro: ' + (data.error || r.status)); return; }
+        destApiRoot    = data.root    || '';
+        destApiFolders = data.folders || [];
+        refreshDestRootBar();
+        const tab = activeTab();
+        if (tab) { rematchAllDests(tab); rebuildCardDestUIs(tab); updateSaveDestsBtn(); }
+        toast(`✓ Pasta trocada — ${destApiFolders.length} pasta(s) carregadas`);
+        modal.classList.remove('open');
+    } catch (e) {
+        toast('Erro ao trocar pasta: ' + e.message);
+    } finally {
+        confirm.disabled = false;
+        confirm.textContent = 'Trocar';
+    }
 });
 
 // ── Load file → create tab ──
@@ -3103,9 +3255,10 @@ function updateSaveDestsBtn() {
 }
 
 function refreshDestRootBar() {
-    const label = document.getElementById('dest-root-label');
-    const count = document.getElementById('dest-root-count');
-    const btn   = document.getElementById('dest-root-btn');
+    const label     = document.getElementById('dest-root-label');
+    const count     = document.getElementById('dest-root-count');
+    const btn       = document.getElementById('dest-root-btn');
+    const changeBtn = document.getElementById('dest-root-change-btn');
     if (!label || !btn) return;
     if (destApiRoot) {
         const parts = destApiRoot.replace(/\\/g, '/').split('/');
@@ -3114,11 +3267,13 @@ function refreshDestRootBar() {
         label.classList.remove('empty');
         count.textContent = `${destApiFolders.length} pasta(s)`;
         btn.textContent   = 'Recarregar';
+        if (changeBtn) changeBtn.style.display = '';
     } else {
         label.textContent = 'Servidor não detectado — inicie com: node server.js';
         label.classList.add('empty');
         count.textContent = '';
         btn.textContent   = 'Tentar ligação';
+        if (changeBtn) changeBtn.style.display = 'none';
     }
 }
 
