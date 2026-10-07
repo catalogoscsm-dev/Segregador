@@ -3997,7 +3997,7 @@ async function galSave(item, silent = false) {
 
     // ── Modo catálogo ──
     if (catImagesDirHandle) {
-        const fileName = `pag recorte ${rp}.png`;
+        const fileName = `pag ${item.isPriority ? 'capa' : 'recorte'} ${rp}.png`;
         const res  = await fetch(item.dataURL);
         const blob = await res.blob();
         await catWriteFile(fileName, blob);
