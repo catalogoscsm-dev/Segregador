@@ -4123,13 +4123,7 @@ function galClearOtherCovers(item) {
     });
 }
 
-// só pode haver uma ficha tecnica por pasta
-function galClearOtherFichas(item) {
-    if (!item.isFichaTecnica || !item.destName) return;
-    galleryItems.forEach(other => {
-        if (other.id !== item.id && other.destName === item.destName) other.isFichaTecnica = false;
-    });
-}
+function galClearOtherFichas() { /* múltiplas fichas permitidas — função mantida por compatibilidade */ }
 
 function galleryAdd(item) {
     galClearOtherCovers(item);
@@ -4151,7 +4145,12 @@ function galDestFilename(item) {
         return `${label} pag ${rp}.png`;
     }
     if (isCapa)  return 'capa.png';
-    if (isFicha) return 'ficha tecn.png';
+    if (isFicha) {
+        const fichas = galleryItems.filter(i => i.destName === item.destName && i.isFichaTecnica);
+        if (fichas.length <= 1) return 'ficha tecn.png';
+        const pos = fichas.indexOf(item);
+        return `ficha tecn_${pos + 1}.png`;
+    }
     // vários recortes normais na mesma página e pasta → numera
     const siblings = galleryItems.filter(i =>
         i.destName === item.destName && (i.realPage ?? i.page) === rp && !i.isPriority && !i.isFichaTecnica
@@ -4274,12 +4273,8 @@ function renderGallery() {
 
         galFichaBtn.addEventListener('click', () => {
             if (!item.destName) { toast('Define primeiro o destino da pasta.'); return; }
-            const isNowFicha = !item.isFichaTecnica;
-            galleryItems.forEach(other => {
-                if (other.id !== item.id && other.destName === item.destName) other.isFichaTecnica = false;
-            });
-            item.isFichaTecnica = isNowFicha;
-            if (isNowFicha) item.isPriority = false; // ficha e capa são exclusivos
+            item.isFichaTecnica = !item.isFichaTecnica;
+            if (item.isFichaTecnica) item.isPriority = false; // ficha e capa são exclusivos
             renderGallery();
         });
 
