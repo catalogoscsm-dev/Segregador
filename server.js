@@ -146,10 +146,11 @@ const server = http.createServer((req, res) => {
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
             try {
-                const { folder, filename, data } = JSON.parse(body);
+                const { folder, filename, data, root: reqRoot } = JSON.parse(body);
 
-                const destDir = path.resolve(path.join(ROOT_FOLDER, folder));
-                const rootRes = path.resolve(ROOT_FOLDER);
+                const baseRoot = (reqRoot && typeof reqRoot === 'string') ? reqRoot : ROOT_FOLDER;
+                const destDir  = path.resolve(path.join(baseRoot, folder));
+                const rootRes  = path.resolve(baseRoot);
                 if (!destDir.startsWith(rootRes)) {
                     res.writeHead(403, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: 'Caminho fora da pasta raiz.' }));

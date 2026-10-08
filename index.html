@@ -276,6 +276,31 @@
         .btn-ctrl:hover { border-color: rgba(255,255,255,0.12); color: var(--text-2); background: rgba(255,255,255,0.04); }
 
         .ctrl-hint { font-size: 0.73rem; color: var(--text-3); flex-shrink: 0; white-space: nowrap; }
+
+        /* ─ Batch dest assign ─ */
+        .dest-batch {
+            display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0;
+        }
+        .dest-batch-input {
+            width: 90px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); color: var(--text);
+            padding: 0.28rem 0.5rem; font-size: 0.76rem;
+            outline: none; font-family: inherit;
+        }
+        .dest-batch-input:focus { border-color: var(--a1); }
+        .dest-batch-input::placeholder { color: var(--text-3); }
+        .btn-batch {
+            padding: 0.3rem 0.65rem;
+            border-radius: var(--radius-sm); border: 1px solid var(--border);
+            background: transparent; color: var(--text-3);
+            font-size: 0.73rem; font-weight: 600; cursor: pointer;
+            transition: all 0.15s; white-space: nowrap;
+        }
+        .btn-batch:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn-batch-assign:not(:disabled):hover { border-color: #4ade80; color: #4ade80; background: rgba(74,222,128,0.07); }
+        .btn-batch-seq:not(:disabled):hover    { border-color: #60a5fa; color: #60a5fa; background: rgba(96,165,250,0.07); }
+
         .ctrl-hint kbd {
             display: inline-block; padding: 0.1rem 0.35rem;
             border: 1px solid var(--border); border-radius: 4px;
@@ -691,6 +716,17 @@
         }
         .card-dest-match.ok  { color: #4ade80; }
         .card-dest-match.err { color: #f87171; }
+        .card-dest-save-btn {
+            flex-shrink: 0; background: none; border: none; cursor: pointer;
+            color: var(--text-3); padding: 0 0.15rem; line-height: 1;
+            opacity: 0; pointer-events: none;
+            transition: color 0.15s, opacity 0.15s, transform 0.1s;
+        }
+        .card-dest-save-btn svg { display: block; }
+        .card-dest-save-btn.ready { color: #4ade80; opacity: 1; pointer-events: auto; }
+        .card-dest-save-btn.ready:hover { color: #86efac; transform: scale(1.2); }
+        .card-dest-save-btn.saving { color: #fbbf24; opacity: 1; pointer-events: none; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Salvar destinos button */
         .btn-dl-savedests {
@@ -1374,6 +1410,11 @@
             <button class="btn-ctrl" id="btn-even">Pares</button>
         </div>
         <span class="ctrl-hint"><kbd>Shift</kbd> + clique para intervalo</span>
+        <div class="dest-batch">
+            <input class="dest-batch-input" id="dest-batch-input" type="text" placeholder="pasta..." autocomplete="off">
+            <button class="btn-batch btn-batch-assign" id="btn-batch-assign" disabled title="Atribuir esta pasta a todas as páginas selecionadas">Atribuir</button>
+            <button class="btn-batch btn-batch-seq"    id="btn-batch-seq"    disabled title="Preencher selecionadas sequencialmente a partir deste número">Seq ↓</button>
+        </div>
         <div style="display:flex;gap:0.3rem;flex-shrink:0;margin-left:auto">
             <button class="btn-view" id="btn-view-auto" title="Grade automática" style="width:auto;padding:0 0.55rem;gap:0.3rem;font-size:0.73rem;font-weight:600;">
                 <svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
@@ -1685,22 +1726,24 @@ async function dbSaveTab(tab) {
     return new Promise((res, rej) => {
         const tx = db.transaction(ST_TABS, 'readwrite');
         tx.objectStore(ST_TABS).put({
-            id:            tab.id,
-            fileName:      tab.fileName,
-            fileSize:      tab.fileSize,
-            pdfBytes:      tab.pdfBytes ?? null,
-            imageBytes:    tab.imageBytes ?? null,
-            imageMimeType: tab.imageMimeType ?? null,
-            isImage:       !!tab.isImage,
-            imageW:        tab.imageW ?? null,
-            imageH:        tab.imageH ?? null,
-            selected:      [...tab.selected],
-            lastIdx:       tab.lastIdx,
-            order:         tabs.indexOf(tab),
-            pageOrder:     tab.pageOrder ?? null,
-            isSubgroup:    !!tab.isSubgroup,
-            parentPages:   tab.parentPages ?? null,
-            parentTabId:   tab.parentTabId ?? null
+            id:             tab.id,
+            fileName:       tab.fileName,
+            fileSize:       tab.fileSize,
+            pdfBytes:       tab.pdfBytes ?? null,
+            imageBytes:     tab.imageBytes ?? null,
+            imageMimeType:  tab.imageMimeType ?? null,
+            isImage:        !!tab.isImage,
+            imageW:         tab.imageW ?? null,
+            imageH:         tab.imageH ?? null,
+            selected:       [...tab.selected],
+            lastIdx:        tab.lastIdx,
+            order:          tabs.indexOf(tab),
+            pageOrder:      tab.pageOrder ?? null,
+            isSubgroup:     !!tab.isSubgroup,
+            parentPages:    tab.parentPages ?? null,
+            parentTabId:    tab.parentTabId ?? null,
+            destApiRoot:    tab.destApiRoot    || '',
+            destApiFolders: tab.destApiFolders || []
         });
         tx.oncomplete = res;
         tx.onerror    = e => rej(e.target.error);
@@ -1866,27 +1909,29 @@ async function restoreState() {
                 });
                 const lsSel = lsLoadSelection(s.id);
                 tabs.push({
-                    id:            s.id,
-                    fileName:      s.fileName,
-                    shortName:     s.fileName.replace(/\.[^.]+$/, ''),
-                    fileSize:      s.fileSize,
-                    isImage:       true,
-                    imageMimeType: s.imageMimeType,
-                    imageBytes:    s.imageBytes,
-                    imageDataURL:  dataURL,
-                    imageW:        s.imageW,
-                    imageH:        s.imageH,
-                    pdfJsDoc:      null,
-                    pdfLibDoc:     null,
-                    pdfBytes:      null,
-                    totalPages:    1,
-                    selected:      new Set(lsSel ?? s.selected),
-                    lastIdx:       s.lastIdx,
-                    thumbs:        { 1: dataURL },
-                    thumbsHD:      { 1: { src: dataURL, w: s.imageW, h: s.imageH } },
-                    pageOrder:     [1],
-                    handled:       lsLoadHandled(s.id),
-                    isSubgroup:    false
+                    id:             s.id,
+                    fileName:       s.fileName,
+                    shortName:      s.fileName.replace(/\.[^.]+$/, ''),
+                    fileSize:       s.fileSize,
+                    isImage:        true,
+                    imageMimeType:  s.imageMimeType,
+                    imageBytes:     s.imageBytes,
+                    imageDataURL:   dataURL,
+                    imageW:         s.imageW,
+                    imageH:         s.imageH,
+                    pdfJsDoc:       null,
+                    pdfLibDoc:      null,
+                    pdfBytes:       null,
+                    totalPages:     1,
+                    selected:       new Set(lsSel ?? s.selected),
+                    lastIdx:        s.lastIdx,
+                    thumbs:         { 1: dataURL },
+                    thumbsHD:       { 1: { src: dataURL, w: s.imageW, h: s.imageH } },
+                    pageOrder:      [1],
+                    handled:        lsLoadHandled(s.id),
+                    isSubgroup:     false,
+                    destApiRoot:    s.destApiRoot    || '',
+                    destApiFolders: s.destApiFolders || []
                 });
                 continue;
             }
@@ -1899,22 +1944,24 @@ async function restoreState() {
             ]);
             const lsSel = lsLoadSelection(s.id);
             tabs.push({
-                id:          s.id,
-                fileName:    s.fileName,
-                shortName:   s.fileName.replace(/\.pdf$/i, ''),
-                fileSize:    s.fileSize,
+                id:             s.id,
+                fileName:       s.fileName,
+                shortName:      s.fileName.replace(/\.pdf$/i, ''),
+                fileSize:       s.fileSize,
                 pdfJsDoc,
                 pdfLibDoc,
-                pdfBytes:    s.pdfBytes,
-                totalPages:  pdfJsDoc.numPages,
-                selected:    new Set(lsSel ?? s.selected),
-                lastIdx:     s.lastIdx,
-                thumbs:      cachedThumbs,
-                pageOrder:   s.pageOrder ?? Array.from({length: pdfJsDoc.numPages}, (_, i) => i + 1),
-                handled:     lsLoadHandled(s.id),
-                isSubgroup:  !!s.isSubgroup,
-                parentPages: s.parentPages ?? null,
-                parentTabId: s.parentTabId ?? null
+                pdfBytes:       s.pdfBytes,
+                totalPages:     pdfJsDoc.numPages,
+                selected:       new Set(lsSel ?? s.selected),
+                lastIdx:        s.lastIdx,
+                thumbs:         cachedThumbs,
+                pageOrder:      s.pageOrder ?? Array.from({length: pdfJsDoc.numPages}, (_, i) => i + 1),
+                handled:        lsLoadHandled(s.id),
+                isSubgroup:     !!s.isSubgroup,
+                parentPages:    s.parentPages ?? null,
+                parentTabId:    s.parentTabId ?? null,
+                destApiRoot:    s.destApiRoot    || '',
+                destApiFolders: s.destApiFolders || []
             });
         } catch (e) {
             console.warn('[CSM Splitter] Falha ao restaurar aba:', s.fileName, e);
@@ -2060,6 +2107,62 @@ document.getElementById('btn-even').addEventListener('click', () => {
     syncCards(t); syncSelection(t);
 });
 
+// ── Batch dest assign ────────────────────────────────────────────────────────
+document.getElementById('btn-batch-assign').addEventListener('click', () => {
+    const tab = activeTab(); if (!tab?.selected.size) return;
+    const q = document.getElementById('dest-batch-input').value.trim();
+    if (!q) { toast('Digite o nome da pasta primeiro.'); return; }
+    const name = matchDestFolder(q);
+    if (!name) { toast(`Pasta "${q}" não encontrada. Verifica o nome.`); return; }
+    if (!tab.pageDests) tab.pageDests = {};
+    let count = 0;
+    tab.selected.forEach(n => {
+        const wasPriority = tab.pageDests[n]?.isPriority || false;
+        tab.pageDests[n] = { query: q, name, isPriority: wasPriority };
+        const card = pagesGrid.querySelector(`[data-page="${n}"]`);
+        if (card) {
+            const input = card.querySelector('.card-dest-input');
+            if (input) input.value = q;
+            updateCardDestUI(card, n, tab);
+        }
+        count++;
+    });
+    updateSaveDestsBtn();
+    toast(`✓ Pasta "${name}" atribuída a ${count} página(s).`);
+});
+
+document.getElementById('btn-batch-seq').addEventListener('click', () => {
+    const tab = activeTab(); if (!tab?.selected.size) return;
+    const raw = document.getElementById('dest-batch-input').value.trim();
+    if (!raw) { toast('Digite o número inicial da sequência.'); return; }
+    // extrai parte numérica e sufixo ("8b" → num=8, suffix="b")
+    const match = raw.match(/^(\d+)([a-zA-Z]*)$/);
+    if (!match) { toast('Para sequência, use um número (ex: 1, 8, 15).'); return; }
+    let num    = parseInt(match[1], 10);
+    const suffix = match[2] || '';
+    if (!tab.pageDests) tab.pageDests = {};
+    const pages = [...tab.selected].sort((a, b) => a - b);
+    let assigned = 0, skipped = 0;
+    pages.forEach(n => {
+        const q    = `${num}${suffix}`;
+        const name = matchDestFolder(q);
+        num++;
+        if (!name) { skipped++; return; }
+        const wasPriority = tab.pageDests[n]?.isPriority || false;
+        tab.pageDests[n] = { query: q, name, isPriority: wasPriority };
+        const card = pagesGrid.querySelector(`[data-page="${n}"]`);
+        if (card) {
+            const input = card.querySelector('.card-dest-input');
+            if (input) input.value = q;
+            updateCardDestUI(card, n, tab);
+        }
+        assigned++;
+    });
+    updateSaveDestsBtn();
+    const msg = skipped ? ` (${skipped} sem match ignoradas)` : '';
+    toast(`✓ Sequência preenchida: ${assigned} página(s)${msg}.`);
+});
+
 document.getElementById('btn-pdf').addEventListener('click', downloadPDF);
 document.getElementById('btn-zip').addEventListener('click', downloadZIP);
 document.getElementById('btn-subgroup').addEventListener('click', createSubgroup);
@@ -2075,7 +2178,8 @@ document.getElementById('btn-save-dests').addEventListener('click', saveAllDests
 
 document.getElementById('dest-root-btn').addEventListener('click', () => {
     loadFoldersFromAPI().then(() => {
-        if (destApiRoot) toast(`✓ ${destApiFolders.length} pastas carregadas de: ${destApiRoot.split('\\').pop()}`);
+        const tab = activeTab();
+        if (tab?.destApiRoot) toast(`✓ ${tab.destApiFolders.length} pastas carregadas de: ${tab.destApiRoot.split('\\').pop()}`);
         else toast('Servidor não encontrado. Inicie com: node server.js');
     });
 });
@@ -2146,12 +2250,15 @@ document.getElementById('switch-confirm').addEventListener('click', async () => 
         });
         const data = await r.json();
         if (!r.ok) { toast('Erro: ' + (data.error || r.status)); return; }
-        destApiRoot    = data.root    || '';
-        destApiFolders = data.folders || [];
-        refreshDestRootBar();
         const tab = activeTab();
-        if (tab) { rematchAllDests(tab); rebuildCardDestUIs(tab); updateSaveDestsBtn(); }
-        toast(`✓ Pasta trocada — ${destApiFolders.length} pasta(s) carregadas`);
+        if (tab) {
+            tab.destApiRoot    = data.root    || '';
+            tab.destApiFolders = data.folders || [];
+            scheduleTabSave(tab);
+            rematchAllDests(tab); rebuildCardDestUIs(tab); updateSaveDestsBtn();
+        }
+        refreshDestRootBar();
+        toast(`✓ Pasta trocada — ${(data.folders||[]).length} pasta(s) carregadas`);
         modal.classList.remove('open');
     } catch (e) {
         toast('Erro ao trocar pasta: ' + e.message);
@@ -2187,11 +2294,13 @@ async function handlePDFFile(file) {
             pdfLibDoc,
             pdfBytes,
             totalPages: pdfJsDoc.numPages,
-            selected:   new Set(),
-            lastIdx:    null,
-            thumbs:     {},
-            pageOrder:  Array.from({length: pdfJsDoc.numPages}, (_, i) => i + 1),
-            handled:    new Set()
+            selected:      new Set(),
+            lastIdx:       null,
+            thumbs:        {},
+            pageOrder:     Array.from({length: pdfJsDoc.numPages}, (_, i) => i + 1),
+            handled:       new Set(),
+            destApiRoot:   '',
+            destApiFolders: []
         };
 
         tabs.push(tab);
@@ -2247,12 +2356,14 @@ async function handleImageFile(file) {
             pdfLibDoc:     null,
             pdfBytes:      null,
             totalPages:    1,
-            selected:      new Set(),
-            lastIdx:       null,
-            thumbs:        { 1: dataURL },
-            thumbsHD:      { 1: { src: dataURL, w, h } },
-            pageOrder:     [1],
-            handled:       new Set()
+            selected:       new Set(),
+            lastIdx:        null,
+            thumbs:         { 1: dataURL },
+            thumbsHD:       { 1: { src: dataURL, w, h } },
+            pageOrder:      [1],
+            handled:        new Set(),
+            destApiRoot:    '',
+            destApiFolders: []
         };
 
         tabs.push(tab);
@@ -2290,6 +2401,7 @@ function activateTab(id) {
     buildGrid(t);
     syncSelection(t);
     updateSaveDestsBtn();
+    refreshDestRootBar();
 }
 
 function closeTab(id) {
@@ -2393,6 +2505,11 @@ function makeCard(tab, n) {
             <input class="card-dest-input" type="text" placeholder="→ pasta (ex: 6, 8b)" autocomplete="off"
                 value="${tab.pageDests?.[n]?.query || ''}">
             <span class="card-dest-match"></span>
+            <button class="card-dest-save-btn${tab.pageDests?.[n]?.name ? ' ready' : ''}" title="Salvar esta página na pasta">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+            </button>
         </div>
         <div class="card-overlay"></div>`;
 
@@ -2439,6 +2556,15 @@ function makeCard(tab, n) {
     });
 
     priorityBtn.addEventListener('mousedown', e => e.stopPropagation());
+
+    // ── Save individual card ─────────────────────────────────────
+    const cardSaveBtn = card.querySelector('.card-dest-save-btn');
+    cardSaveBtn.addEventListener('click',     e => e.stopPropagation());
+    cardSaveBtn.addEventListener('mousedown', e => e.stopPropagation());
+    cardSaveBtn.addEventListener('click', async () => {
+        if (!cardSaveBtn.classList.contains('ready')) return;
+        await saveSinglePage(tab, n, cardSaveBtn);
+    });
 
     // restore indicator for already-set destinations (after buildGrid)
     if (tab.pageDests?.[n]?.query) updateCardDestUI(card, n, tab);
@@ -2608,6 +2734,9 @@ function syncSelection(tab) {
     selText.textContent = `${count} de ${tab.totalPages} selecionadas`;
     bbCount.textContent = `${count} página${count!==1?'s':''} selecionada${count!==1?'s':''}`;
     bottomBar.classList.toggle('visible', count > 0);
+    const hasSelection = count > 0;
+    document.getElementById('btn-batch-assign').disabled = !hasSelection;
+    document.getElementById('btn-batch-seq').disabled    = !hasSelection;
     scheduleTabSave(tab); // persist selection change
 }
 
@@ -2652,14 +2781,16 @@ async function createSubgroup() {
             pdfLibDoc,
             pdfBytes,
             totalPages:  pdfJsDoc.numPages,
-            selected:    new Set(),
-            lastIdx:     null,
+            selected:       new Set(),
+            lastIdx:        null,
             thumbs,
-            pageOrder:   Array.from({length: pdfJsDoc.numPages}, (_, i) => i + 1),
-            handled:     new Set(),
-            isSubgroup:  true,
-            parentPages: pages,
-            parentTabId: tab.id
+            pageOrder:      Array.from({length: pdfJsDoc.numPages}, (_, i) => i + 1),
+            handled:        new Set(),
+            isSubgroup:     true,
+            parentPages:    pages,
+            parentTabId:    tab.id,
+            destApiRoot:    tab.destApiRoot    || '',
+            destApiFolders: tab.destApiFolders ? [...tab.destApiFolders] : []
         };
 
         tabs.push(subTab);
@@ -3202,23 +3333,24 @@ async function restoreDistribHandle() {
 
 // ── Destino por card (via servidor local) ──
 
-var destApiFolders = []; // array de strings com nomes das subpastas
-var destApiRoot    = '';
-
 async function loadFoldersFromAPI() {
+    const tab = activeTab();
     try {
         const r = await fetch('/api/folders');
         if (!r.ok) throw new Error('Servidor não respondeu');
         const data = await r.json();
-        destApiRoot    = data.root || '';
-        destApiFolders = data.folders || [];
+        if (tab) {
+            tab.destApiRoot    = data.root || '';
+            tab.destApiFolders = data.folders || [];
+            scheduleTabSave(tab);
+        }
         refreshDestRootBar();
-        const tab = activeTab();
         if (tab) { rematchAllDests(tab); rebuildCardDestUIs(tab); updateSaveDestsBtn(); }
     } catch (e) {
-        // servidor não disponível — modo silencioso
-        destApiRoot    = '';
-        destApiFolders = [];
+        if (tab) {
+            tab.destApiRoot    = '';
+            tab.destApiFolders = [];
+        }
         refreshDestRootBar();
     }
 }
@@ -3234,7 +3366,8 @@ function matchDestFolder(query) {
     if (!query) return null;
     const q   = query.trim().toLowerCase();
     if (!q) return null;
-    const src = destApiFolders.length ? destApiFolders
+    const src = activeTab()?.destApiFolders?.length
+              ? activeTab().destApiFolders
               : distribSubfolders.map(f => f.name);
     // 1. match exato chave normalizada
     let name = src.find(n => normKey(n) === q);
@@ -3245,12 +3378,22 @@ function matchDestFolder(query) {
 }
 
 function updateCardDestUI(card, n, tab) {
-    const dest = tab.pageDests?.[n];
-    const ind  = card.querySelector('.card-dest-match');
+    const dest    = tab.pageDests?.[n];
+    const ind     = card.querySelector('.card-dest-match');
+    const saveBtn = card.querySelector('.card-dest-save-btn');
     if (!ind) return;
-    if (!dest?.query) { ind.textContent = ''; ind.className = 'card-dest-match'; return; }
-    if (dest.name)    { ind.textContent = dest.name; ind.className = 'card-dest-match ok'; }
-    else              { ind.textContent = '✗'; ind.className = 'card-dest-match err'; }
+    if (!dest?.query) {
+        ind.textContent = ''; ind.className = 'card-dest-match';
+        saveBtn?.classList.remove('ready');
+        return;
+    }
+    if (dest.name) {
+        ind.textContent = dest.name; ind.className = 'card-dest-match ok';
+        saveBtn?.classList.add('ready');
+    } else {
+        ind.textContent = '✗'; ind.className = 'card-dest-match err';
+        saveBtn?.classList.remove('ready');
+    }
 }
 
 function updateSaveDestsBtn() {
@@ -3269,12 +3412,15 @@ function refreshDestRootBar() {
     const btn       = document.getElementById('dest-root-btn');
     const changeBtn = document.getElementById('dest-root-change-btn');
     if (!label || !btn) return;
-    if (destApiRoot) {
-        const parts = destApiRoot.replace(/\\/g, '/').split('/');
-        label.textContent = parts[parts.length - 1] || destApiRoot;
-        label.title       = destApiRoot;
+    const tab  = activeTab();
+    const root = tab?.destApiRoot    || '';
+    const flds = tab?.destApiFolders || [];
+    if (root) {
+        const parts = root.replace(/\\/g, '/').split('/');
+        label.textContent = parts[parts.length - 1] || root;
+        label.title       = root;
         label.classList.remove('empty');
-        count.textContent = `${destApiFolders.length} pasta(s)`;
+        count.textContent = `${flds.length} pasta(s)`;
         btn.textContent   = 'Recarregar';
         if (changeBtn) changeBtn.style.display = '';
     } else {
@@ -3301,6 +3447,47 @@ function rebuildCardDestUIs(tab) {
         const n = parseInt(card.dataset.page);
         if (tab.pageDests?.[n]) updateCardDestUI(card, n, tab);
     });
+}
+
+async function saveSinglePage(tab, n, btn) {
+    const dest = tab.pageDests?.[n];
+    if (!dest?.name) return;
+    const root = tab.destApiRoot || '';
+    if (!root) { toast('Conecta a pasta de destino antes de salvar.'); return; }
+
+    btn.classList.remove('ready');
+    btn.classList.add('saving');
+    try {
+        const canvas  = await renderErasedPageCanvas(tab, n);
+        const blob    = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        const base64  = await new Promise((res, rej) => {
+            const reader = new FileReader();
+            reader.onload  = () => res(reader.result.split(',')[1]);
+            reader.onerror = rej;
+            reader.readAsDataURL(blob);
+        });
+        const filename = dest.isPriority ? 'capa.png' : `foto_pag${realPageNum(tab, n)}.png`;
+        const r = await fetch('/api/save', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ folder: dest.name, filename, data: base64, root: root || undefined })
+        });
+        const result = await r.json();
+        if (!r.ok) throw new Error(result.error || `HTTP ${r.status}`);
+        markPage(tab, n);
+        toast(`✓ Salvo em "${dest.name}/${filename}"`);
+        // troca ícone para check brevemente depois de salvar
+        btn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+        btn.classList.remove('saving');
+        btn.classList.add('ready');
+        setTimeout(() => {
+            btn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+        }, 1500);
+    } catch (e) {
+        toast(`Erro ao salvar: ${e.message}`);
+        btn.classList.remove('saving');
+        btn.classList.add('ready');
+    }
 }
 
 async function saveAllDests() {
@@ -3330,11 +3517,11 @@ async function saveAllDests() {
                 reader.readAsDataURL(blob);
             });
 
-            const filename = isPriority ? 'capa.png' : 'foto.png';
+            const filename = isPriority ? 'capa.png' : `foto_pag${realPageNum(tab, page)}.png`;
             const r = await fetch('/api/save', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ folder, filename, data: base64 })
+                body:    JSON.stringify({ folder, filename, data: base64, root: tab.destApiRoot || undefined })
             });
             const result = await r.json();
             if (!r.ok) throw new Error(result.error || `HTTP ${r.status}`);
@@ -4071,8 +4258,9 @@ galleryBtnEl.addEventListener('click', openGallery);
 document.getElementById('gal-save-all').addEventListener('click', async () => {
     if (!galleryItems.length) return;
 
-    const withDest    = galleryItems.filter(i => i.destName && destApiRoot);
-    const withoutDest = galleryItems.filter(i => !(i.destName && destApiRoot));
+    const activeRoot  = activeTab()?.destApiRoot || '';
+    const withDest    = galleryItems.filter(i => i.destName && activeRoot);
+    const withoutDest = galleryItems.filter(i => !(i.destName && activeRoot));
 
     if (!withDest.length) {
         // nenhum destino definido — comportamento antigo (download tudo)
@@ -4164,14 +4352,15 @@ async function galSave(item, silent = false) {
     const rp = item.realPage ?? item.page;
 
     // ── Modo destino por pasta (API) ──
-    if (item.destName && destApiRoot) {
+    const tabRoot = activeTab()?.destApiRoot || '';
+    if (item.destName && tabRoot) {
         try {
             const base64 = item.dataURL.split(',')[1];
             const fname  = galDestFilename(item);
             const r = await fetch('/api/save', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ folder: item.destName, filename: fname, data: base64 })
+                body:    JSON.stringify({ folder: item.destName, filename: fname, data: base64, root: tabRoot || undefined })
             });
             const result = await r.json();
             if (!r.ok) throw new Error(result.error || `HTTP ${r.status}`);
