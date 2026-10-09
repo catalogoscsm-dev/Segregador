@@ -3470,22 +3470,9 @@ async function saveSinglePage(tab, n, btn) {
     btn.classList.remove('ready');
     btn.classList.add('saving');
     try {
-        const canvas  = await renderErasedPageCanvas(tab, n);
-        const blob    = await new Promise(res => canvas.toBlob(res, 'image/png'));
-        const base64  = await new Promise((res, rej) => {
-            const reader = new FileReader();
-            reader.onload  = () => res(reader.result.split(',')[1]);
-            reader.onerror = rej;
-            reader.readAsDataURL(blob);
-        });
+        const canvas   = await renderErasedPageCanvas(tab, n);
         const filename = dest.isPriority ? 'capa.png' : `foto_pag${realPageNum(tab, n)}.png`;
-        const r = await fetch(`${API_BASE}/api/save`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ folder: dest.name, filename, data: base64, root: root || undefined })
-        });
-        const result = await r.json();
-        if (!r.ok) throw new Error(result.error || `HTTP ${r.status}`);
+        await saveBin(canvas, dest.name, filename, root || undefined);
         markPage(tab, n);
         toast(`✓ Salvo em "${dest.name}/${filename}"`);
         // troca ícone para check brevemente depois de salvar
@@ -3500,6 +3487,21 @@ async function saveSinglePage(tab, n, btn) {
         btn.classList.remove('saving');
         btn.classList.add('ready');
     }
+}
+
+// ── Save helper — envia PNG em binário (sem base64, 33% menos dados) ────────
+async function saveBin(canvas, folder, filename, root) {
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    const params = new URLSearchParams({ folder, filename });
+    if (root) params.set('root', root);
+    const r = await fetch(`${API_BASE}/api/save-bin?${params}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/png' },
+        body: blob
+    });
+    const result = await r.json();
+    if (!r.ok) throw new Error(result.error || `HTTP ${r.status}`);
+    return result;
 }
 
 // ── Save — background mode (wake lock + audio + RAF polyfill) ─
@@ -3573,22 +3575,8 @@ async function saveAllDests() {
             loaderText.textContent = `Salvando ${i + 1}/${tasks.length} — "${folder}"`;
             setProgress(5 + ((i + 1) / tasks.length) * 88);
 
-            const blob   = await new Promise(res => canvas.toBlob(res, 'image/png'));
-            const base64 = await new Promise((res, rej) => {
-                const reader = new FileReader();
-                reader.onload  = () => res(reader.result.split(',')[1]);
-                reader.onerror = rej;
-                reader.readAsDataURL(blob);
-            });
-
             const filename = isPriority ? 'capa.png' : `foto_pag${realPageNum(tab, page)}.png`;
-            const r = await fetch(`${API_BASE}/api/save`, {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ folder, filename, data: base64, root: tab.destApiRoot || undefined })
-            });
-            const result = await r.json();
-            if (!r.ok) throw new Error(result.error || `HTTP ${r.status}`);
+            await saveBin(canvas, folder, filename, tab.destApiRoot || undefined);
             markPage(tab, page);
             saved++;
         }
@@ -4423,12 +4411,14 @@ async function galSave(item, silent = false) {
     const tabRoot = activeTab()?.destApiRoot || '';
     if (item.destName && tabRoot) {
         try {
-            const base64 = item.dataURL.split(',')[1];
             const fname  = galDestFilename(item);
-            const r = await fetch(`${API_BASE}/api/save`, {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ folder: item.destName, filename: fname, data: base64, root: tabRoot || undefined })
+            // Converte dataURL para blob para envio binário
+            const binRes = await fetch(item.dataURL);
+            const blob   = await binRes.blob();
+            const params = new URLSearchParams({ folder: item.destName, filename: fname });
+            if (tabRoot) params.set('root', tabRoot);
+            const r = await fetch(`${API_BASE}/api/save-bin?${params}`, {
+                method: 'POST', headers: { 'Content-Type': 'image/png' }, body: blob
             });
             const result = await r.json();
             if (!r.ok) throw new Error(result.error || `HTTP ${r.status}`);

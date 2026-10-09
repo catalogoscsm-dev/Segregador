@@ -140,6 +140,43 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // ── POST /api/save-bin ───────────────────────────────────────────────────
+    // Recebe o PNG em binário direto (sem base64) — mais rápido e mais leve
+    if (pathname === '/api/save-bin' && req.method === 'POST') {
+        const { folder, filename, root: reqRoot } = parsed.query;
+        if (!folder || !filename) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Parâmetros folder e filename obrigatórios.' }));
+            return;
+        }
+        const baseRoot = (reqRoot && typeof reqRoot === 'string') ? reqRoot : ROOT_FOLDER;
+        const destDir  = path.resolve(path.join(baseRoot, folder));
+        const rootRes  = path.resolve(baseRoot);
+        if (!destDir.startsWith(rootRes)) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Caminho fora da pasta raiz.' }));
+            return;
+        }
+        if (!fs.existsSync(destDir)) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `Pasta não encontrada: ${folder}` }));
+            return;
+        }
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', () => {
+            try {
+                fs.writeFileSync(path.join(destDir, filename), Buffer.concat(chunks));
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true }));
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
     // ── POST /api/save ────────────────────────────────────────────────────────
     if (pathname === '/api/save' && req.method === 'POST') {
         let body = '';
