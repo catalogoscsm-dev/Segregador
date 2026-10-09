@@ -691,6 +691,17 @@
         .distrib-input-num { max-width: 64px; text-align: center; }
         .distrib-perpasta-hint { font-size: 0.78rem; color: var(--text-2); }
 
+        /* ── Server offline banner ── */
+        #server-offline-banner {
+            display: none; align-items: center; gap: 0.6rem;
+            padding: 0.45rem 1rem;
+            background: rgba(239,68,68,0.12);
+            border-bottom: 1px solid rgba(239,68,68,0.3);
+            font-size: 0.8rem; color: #fca5a5; flex-shrink: 0;
+        }
+        #server-offline-banner.visible { display: flex; }
+        #server-offline-banner strong { color: #f87171; }
+
         /* ── Dest root bar ── */
         #dest-root-bar {
             display: flex; align-items: center; gap: 0.6rem;
@@ -1437,6 +1448,12 @@
         </div>
     </div>
 
+    <!-- Server offline banner -->
+    <div id="server-offline-banner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span><strong>Servidor offline.</strong> Abra o app pelo atalho ou aceda a <strong>http://localhost:8787</strong> — não abra o ficheiro HTML diretamente.</span>
+    </div>
+
     <!-- Dest root bar -->
     <div id="dest-root-bar">
         <svg class="dest-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1999,6 +2016,19 @@ async function restoreState() {
     toast(`✓ Sessão restaurada — ${_parts.join(' e ')} recuperado${tabs.length>1?'s':''}`);
 }
 
+// ── API base (servidor Node local) ───────────────────────────
+const API_BASE = 'http://localhost:8787';
+
+(async function checkServer() {
+    try {
+        const r = await fetch(`${API_BASE}/api/folders`, { signal: AbortSignal.timeout(3000) });
+        if (!r.ok) throw new Error();
+        document.getElementById('server-offline-banner')?.classList.remove('visible');
+    } catch {
+        document.getElementById('server-offline-banner')?.classList.add('visible');
+    }
+})();
+
 // ── Worker init (blob fetch to bypass file:// restrictions) ──
 const _WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const workerReady = (async () => {
@@ -2218,7 +2248,7 @@ document.getElementById('switch-confirm').addEventListener('click', async () => 
     confirm.disabled = true;
     confirm.textContent = 'Conectando...';
     try {
-        const r    = await fetch('/api/set-root', {
+        const r    = await fetch(`${API_BASE}/api/set-root`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ root: newRoot })
@@ -2236,7 +2266,11 @@ document.getElementById('switch-confirm').addEventListener('click', async () => 
         toast(`✓ Pasta conectada — ${(data.folders||[]).length} subpasta(s) carregadas`);
         modal.classList.remove('open');
     } catch (e) {
-        toast('Erro ao conectar pasta: ' + e.message);
+        const msg = (e instanceof TypeError && e.message === 'Failed to fetch')
+            ? 'Servidor offline — abra o app via http://localhost:8787'
+            : 'Erro ao conectar pasta: ' + e.message;
+        toast(msg);
+        document.getElementById('server-offline-banner')?.classList.add('visible');
     } finally {
         confirm.disabled = false;
         confirm.textContent = 'Conectar';
@@ -3311,7 +3345,7 @@ async function restoreDistribHandle() {
 async function loadFoldersFromAPI() {
     const tab = activeTab();
     try {
-        const r = await fetch('/api/folders');
+        const r = await fetch(`${API_BASE}/api/folders`);
         if (!r.ok) throw new Error('Servidor não respondeu');
         const data = await r.json();
         if (tab) {
@@ -3442,7 +3476,7 @@ async function saveSinglePage(tab, n, btn) {
             reader.readAsDataURL(blob);
         });
         const filename = dest.isPriority ? 'capa.png' : `foto_pag${realPageNum(tab, n)}.png`;
-        const r = await fetch('/api/save', {
+        const r = await fetch(`${API_BASE}/api/save`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ folder: dest.name, filename, data: base64, root: root || undefined })
@@ -3493,7 +3527,7 @@ async function saveAllDests() {
             });
 
             const filename = isPriority ? 'capa.png' : `foto_pag${realPageNum(tab, page)}.png`;
-            const r = await fetch('/api/save', {
+            const r = await fetch(`${API_BASE}/api/save`, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body:    JSON.stringify({ folder, filename, data: base64, root: tab.destApiRoot || undefined })
@@ -4332,7 +4366,7 @@ async function galSave(item, silent = false) {
         try {
             const base64 = item.dataURL.split(',')[1];
             const fname  = galDestFilename(item);
-            const r = await fetch('/api/save', {
+            const r = await fetch(`${API_BASE}/api/save`, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body:    JSON.stringify({ folder: item.destName, filename: fname, data: base64, root: tabRoot || undefined })
