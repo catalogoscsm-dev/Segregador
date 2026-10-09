@@ -579,6 +579,16 @@
             justify-content: flex-end;
         }
         #switch-loading { padding: 1.5rem; text-align: center; font-size: 0.82rem; color: var(--text-3); }
+        .switch-path-wrap { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.55rem; }
+        .switch-path-label { font-size: 0.78rem; color: var(--text-2); font-weight: 600; }
+        .switch-path-input {
+            width: 100%; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text); padding: 0.55rem 0.75rem;
+            font-size: 0.82rem; outline: none; font-family: monospace;
+            transition: border-color 0.2s;
+        }
+        .switch-path-input:focus { border-color: var(--a1); }
+        .switch-path-hint { font-size: 0.73rem; color: var(--text-3); }
 
         /* ── Distribuição Modal ── */
         #distrib-modal {
@@ -1434,8 +1444,8 @@
         </svg>
         <span id="dest-root-label" class="empty">Pasta raiz não definida — define para ativar destino por card</span>
         <span id="dest-root-count"></span>
-        <button class="cp-btn primary" id="dest-root-btn" style="font-size:0.75rem;padding:0.22rem 0.6rem;">Definir</button>
-        <button class="cp-btn danger" id="dest-root-change-btn" style="font-size:0.75rem;padding:0.22rem 0.6rem;display:none;" title="Trocar para outra pasta/fornecedor">Trocar</button>
+        <button class="cp-btn primary" id="dest-root-btn" style="font-size:0.75rem;padding:0.22rem 0.6rem;">Conectar</button>
+        <button class="cp-btn danger" id="dest-root-change-btn" style="font-size:0.75rem;padding:0.22rem 0.6rem;display:none;" title="Trocar pasta conectada">Trocar</button>
     </div>
 
     <!-- Pages Grid -->
@@ -1615,22 +1625,24 @@
     </div>
 </div>
 
-<!-- ── Trocar Pasta/Fornecedor Modal ── -->
+<!-- ── Conectar Pasta Modal ── -->
 <div id="switch-modal">
     <div class="switch-box">
         <div class="switch-head">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            <span class="switch-head-title">Trocar Pasta / Fornecedor</span>
+            <span class="switch-head-title">Conectar Pasta</span>
             <button class="switch-head-close" id="switch-close">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
-        <div class="switch-body" id="switch-body">
-            <div id="switch-loading">A carregar catálogos...</div>
+        <div class="switch-path-wrap">
+            <label class="switch-path-label">Caminho da pasta raiz</label>
+            <input class="switch-path-input" id="switch-path-input" type="text" placeholder="C:\Caminho\Completo\Da\Pasta" spellcheck="false" autocomplete="off">
+            <span class="switch-path-hint">Cole ou digite o caminho completo da pasta. As subpastas dentro dela serão usadas como destino de cada card.</span>
         </div>
         <div class="switch-footer">
             <button class="distrib-btn distrib-btn-cancel" id="switch-cancel">Cancelar</button>
-            <button class="distrib-btn distrib-btn-exec" id="switch-confirm" disabled>Trocar</button>
+            <button class="distrib-btn distrib-btn-exec" id="switch-confirm">Conectar</button>
         </div>
     </div>
 </div>
@@ -2176,77 +2188,40 @@ document.getElementById('btn-distrib').addEventListener('click', () => {
 
 document.getElementById('btn-save-dests').addEventListener('click', saveAllDests);
 
-document.getElementById('dest-root-btn').addEventListener('click', () => {
-    loadFoldersFromAPI().then(() => {
-        const tab = activeTab();
-        if (tab?.destApiRoot) toast(`✓ ${tab.destApiFolders.length} pastas carregadas de: ${tab.destApiRoot.split('\\').pop()}`);
-        else toast('Servidor não encontrado. Inicie com: node server.js');
-    });
-});
+document.getElementById('dest-root-btn').addEventListener('click', openSwitchModal);
 
-// ── Modal Trocar Pasta ────────────────────────────────────────────────────────
+// ── Modal Conectar Pasta ──────────────────────────────────────────────────────
 
-let switchSelectedRoot = null;
-
-async function openSwitchModal() {
-    switchSelectedRoot = null;
-    const modal   = document.getElementById('switch-modal');
-    const body    = document.getElementById('switch-body');
-    const confirm = document.getElementById('switch-confirm');
-    confirm.disabled = true;
-    body.innerHTML = '<div id="switch-loading">A carregar catálogos...</div>';
+function openSwitchModal() {
+    const modal = document.getElementById('switch-modal');
+    const input = document.getElementById('switch-path-input');
+    const tab   = activeTab();
+    input.value = tab?.destApiRoot || '';
     modal.classList.add('open');
-    try {
-        const r    = await fetch('/api/catalogs');
-        const data = await r.json();
-        body.innerHTML = '';
-        if (!data.catalogs || !data.catalogs.length) {
-            body.innerHTML = '<div id="switch-loading">Nenhum catálogo encontrado.</div>';
-            return;
-        }
-        data.catalogs.forEach(cat => {
-            const item = document.createElement('div');
-            item.className = 'switch-item' + (cat.current ? ' current' : '');
-            item.dataset.root = cat.root;
-            item.innerHTML = `
-                <span class="switch-item-icon">${cat.current ? '✓' : '📁'}</span>
-                <span class="switch-item-name">${cat.name}</span>
-                ${cat.current
-                    ? '<span class="switch-item-badge current">atual</span>'
-                    : !cat.hasImagens
-                        ? '<span class="switch-item-badge no-img">sem imagens</span>'
-                        : ''}
-            `;
-            if (!cat.current) {
-                item.addEventListener('click', () => {
-                    body.querySelectorAll('.switch-item').forEach(el => el.classList.remove('active'));
-                    item.classList.add('active');
-                    switchSelectedRoot = cat.root;
-                    confirm.disabled = false;
-                });
-            }
-            body.appendChild(item);
-        });
-    } catch (e) {
-        body.innerHTML = `<div id="switch-loading" style="color:#f87171">Erro ao carregar: ${e.message}</div>`;
-    }
+    setTimeout(() => { input.focus(); input.select(); }, 80);
 }
 
 document.getElementById('dest-root-change-btn').addEventListener('click', openSwitchModal);
 document.getElementById('switch-close').addEventListener('click',  () => document.getElementById('switch-modal').classList.remove('open'));
 document.getElementById('switch-cancel').addEventListener('click', () => document.getElementById('switch-modal').classList.remove('open'));
 
+document.getElementById('switch-path-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('switch-confirm').click();
+});
+
 document.getElementById('switch-confirm').addEventListener('click', async () => {
-    if (!switchSelectedRoot) return;
+    const input   = document.getElementById('switch-path-input');
+    const newRoot = input.value.trim();
+    if (!newRoot) { toast('Digite o caminho da pasta.'); input.focus(); return; }
     const modal   = document.getElementById('switch-modal');
     const confirm = document.getElementById('switch-confirm');
     confirm.disabled = true;
-    confirm.textContent = 'Trocando...';
+    confirm.textContent = 'Conectando...';
     try {
         const r    = await fetch('/api/set-root', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ root: switchSelectedRoot })
+            body: JSON.stringify({ root: newRoot })
         });
         const data = await r.json();
         if (!r.ok) { toast('Erro: ' + (data.error || r.status)); return; }
@@ -2258,13 +2233,13 @@ document.getElementById('switch-confirm').addEventListener('click', async () => 
             rematchAllDests(tab); rebuildCardDestUIs(tab); updateSaveDestsBtn();
         }
         refreshDestRootBar();
-        toast(`✓ Pasta trocada — ${(data.folders||[]).length} pasta(s) carregadas`);
+        toast(`✓ Pasta conectada — ${(data.folders||[]).length} subpasta(s) carregadas`);
         modal.classList.remove('open');
     } catch (e) {
-        toast('Erro ao trocar pasta: ' + e.message);
+        toast('Erro ao conectar pasta: ' + e.message);
     } finally {
         confirm.disabled = false;
-        confirm.textContent = 'Trocar';
+        confirm.textContent = 'Conectar';
     }
 });
 
