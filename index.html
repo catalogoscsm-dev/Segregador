@@ -786,6 +786,8 @@
         .loader-text { font-size: 0.9rem; color: var(--text-2); font-weight: 500; }
         .loader-bar-wrap { width: 200px; height: 3px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; }
         .loader-bar { height: 100%; background: linear-gradient(90deg, var(--a1), var(--a3)); border-radius: 99px; transition: width 0.3s ease; width: 0%; }
+        .loader-pause-hint { font-size: 0.78rem; color: #fbbf24; margin-top: 0.5rem; animation: pulse 1.2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
         /* ─ Toast ─ */
         .toast {
@@ -1524,6 +1526,7 @@
     <div class="loader-ring"></div>
     <div class="loader-text" id="loader-text">Carregando...</div>
     <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+    <div class="loader-pause-hint" id="loader-pause-hint" style="display:none">⏸ Volta para esta aba para continuar...</div>
 </div>
 
 <!-- Toast -->
@@ -3499,6 +3502,38 @@ async function saveSinglePage(tab, n, btn) {
     }
 }
 
+// ── Save wake-lock & pause/resume ────────────────────────────
+let _saveLock      = null;
+let _saveResumesFn = null;
+const _loaderPauseHint = document.getElementById('loader-pause-hint');
+
+async function _acquireWakeLock() {
+    try { _saveLock = await navigator.wakeLock.request('screen'); } catch {}
+}
+function _releaseWakeLock() { try { _saveLock?.release(); } catch {} _saveLock = null; }
+
+// Pause save loop while tab is hidden; resume when visible again
+function _waitIfHidden() {
+    if (!document.hidden) return Promise.resolve();
+    _loaderPauseHint.style.display = '';
+    return new Promise(res => { _saveResumesFn = res; });
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        _loaderPauseHint.style.display = 'none';
+        if (_saveResumesFn) { _saveResumesFn(); _saveResumesFn = null; }
+        // re-acquire wake lock (browser releases it when tab is hidden)
+        if (_saveLock === null && document.getElementById('loading-overlay').classList.contains('show')) {
+            _acquireWakeLock();
+        }
+    } else {
+        if (document.getElementById('loading-overlay').classList.contains('show')) {
+            _loaderPauseHint.style.display = '';
+        }
+    }
+});
+
 async function saveAllDests() {
     const tab = activeTab();
     if (!tab?.pageDests) return;
@@ -3508,17 +3543,28 @@ async function saveAllDests() {
     if (!tasks.length) return;
 
     showLoader(`Salvando ${tasks.length} arquivo(s)...`, 5);
+    await _acquireWakeLock();
     let saved = 0;
+
+    // Pipeline: começa a renderizar a página N+1 enquanto envia a página N
+    let nextCanvas = _waitIfHidden().then(() => renderErasedPageCanvas(tab, tasks[0].page));
+
     try {
         for (let i = 0; i < tasks.length; i++) {
             const { page, folder, isPriority } = tasks[i];
-            loaderText.textContent = `Salvando em "${folder}" (${i + 1}/${tasks.length})...`;
+
+            // Aguarda o canvas desta iteração (já estava a renderizar em background)
+            const canvas = await nextCanvas;
+
+            // Dispara imediatamente a renderização da próxima página (overlap com encode+send abaixo)
+            if (i + 1 < tasks.length) {
+                nextCanvas = _waitIfHidden().then(() => renderErasedPageCanvas(tab, tasks[i + 1].page));
+            }
+
+            loaderText.textContent = `Salvando ${i + 1}/${tasks.length} — "${folder}"`;
             setProgress(5 + ((i + 1) / tasks.length) * 88);
 
-            const canvas = await renderErasedPageCanvas(tab, page);
             const blob   = await new Promise(res => canvas.toBlob(res, 'image/png'));
-
-            // converter blob para base64
             const base64 = await new Promise((res, rej) => {
                 const reader = new FileReader();
                 reader.onload  = () => res(reader.result.split(',')[1]);
@@ -3543,6 +3589,9 @@ async function saveAllDests() {
         hideLoader();
         toast(`Erro ao salvar: ${err.message}`);
         console.error('[saveAllDests]', err);
+    } finally {
+        _releaseWakeLock();
+        _loaderPauseHint.style.display = 'none';
     }
 }
 
