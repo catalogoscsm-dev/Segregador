@@ -1526,7 +1526,7 @@
     <div class="loader-ring"></div>
     <div class="loader-text" id="loader-text">Carregando...</div>
     <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
-    <div class="loader-pause-hint" id="loader-pause-hint" style="display:none">⏸ Volta para esta aba para continuar...</div>
+    <div class="loader-pause-hint" id="loader-pause-hint" style="display:none">⚡ A salvar em background — podes usar o computador normalmente</div>
 </div>
 
 <!-- Toast -->
@@ -3502,9 +3502,10 @@ async function saveSinglePage(tab, n, btn) {
     }
 }
 
-// ── Save wake-lock & pause/resume ────────────────────────────
-let _saveLock      = null;
-let _saveResumesFn = null;
+// ── Save — background mode (wake lock + audio + RAF polyfill) ─
+let _saveLock     = null;
+let _keepAliveCtx = null;
+let _origRAF      = null;
 const _loaderPauseHint = document.getElementById('loader-pause-hint');
 
 async function _acquireWakeLock() {
@@ -3512,26 +3513,34 @@ async function _acquireWakeLock() {
 }
 function _releaseWakeLock() { try { _saveLock?.release(); } catch {} _saveLock = null; }
 
-// Pause save loop while tab is hidden; resume when visible again
-function _waitIfHidden() {
-    if (!document.hidden) return Promise.resolve();
-    _loaderPauseHint.style.display = '';
-    return new Promise(res => { _saveResumesFn = res; });
+function _startBackgroundMode() {
+    // AudioContext silencioso: com áudio ativo, Chrome retira o throttle de 1 s dos
+    // setTimeout em abas de background — essencial para o PDF.js continuar a renderizar.
+    try {
+        _keepAliveCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const buf = _keepAliveCtx.createBuffer(1, 1, 22050);
+        const src = _keepAliveCtx.createBufferSource();
+        src.buffer = buf; src.loop = true;
+        src.connect(_keepAliveCtx.destination);
+        src.start(0);
+    } catch {}
+    // Polyfill RAF → setTimeout: PDF.js usa requestAnimationFrame internamente;
+    // substituindo por setTimeout o render deixa de depender da visibilidade da aba.
+    _origRAF = window.requestAnimationFrame;
+    window.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 }
 
+function _stopBackgroundMode() {
+    if (_origRAF) { window.requestAnimationFrame = _origRAF; _origRAF = null; }
+    try { _keepAliveCtx?.close(); } catch {}
+    _keepAliveCtx = null;
+}
+
+// Mostra/esconde hint quando o utilizador sai da aba durante o save
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-        _loaderPauseHint.style.display = 'none';
-        if (_saveResumesFn) { _saveResumesFn(); _saveResumesFn = null; }
-        // re-acquire wake lock (browser releases it when tab is hidden)
-        if (_saveLock === null && document.getElementById('loading-overlay').classList.contains('show')) {
-            _acquireWakeLock();
-        }
-    } else {
-        if (document.getElementById('loading-overlay').classList.contains('show')) {
-            _loaderPauseHint.style.display = '';
-        }
-    }
+    const saving = loadingOv.classList.contains('show');
+    _loaderPauseHint.style.display = (document.hidden && saving) ? '' : 'none';
+    if (!document.hidden && saving) _acquireWakeLock(); // reacquire após voltar
 });
 
 async function saveAllDests() {
@@ -3544,21 +3553,21 @@ async function saveAllDests() {
 
     showLoader(`Salvando ${tasks.length} arquivo(s)...`, 5);
     await _acquireWakeLock();
-    let saved = 0;
+    _startBackgroundMode();
 
-    // Pipeline: começa a renderizar a página N+1 enquanto envia a página N
-    let nextCanvas = _waitIfHidden().then(() => renderErasedPageCanvas(tab, tasks[0].page));
+    // Pipeline: enquanto envia a página N, já renderiza a N+1 em paralelo
+    let nextCanvas = renderErasedPageCanvas(tab, tasks[0].page);
+    let saved = 0;
 
     try {
         for (let i = 0; i < tasks.length; i++) {
             const { page, folder, isPriority } = tasks[i];
 
-            // Aguarda o canvas desta iteração (já estava a renderizar em background)
             const canvas = await nextCanvas;
 
-            // Dispara imediatamente a renderização da próxima página (overlap com encode+send abaixo)
+            // Inicia render da próxima página (corre em paralelo com encode+fetch abaixo)
             if (i + 1 < tasks.length) {
-                nextCanvas = _waitIfHidden().then(() => renderErasedPageCanvas(tab, tasks[i + 1].page));
+                nextCanvas = renderErasedPageCanvas(tab, tasks[i + 1].page);
             }
 
             loaderText.textContent = `Salvando ${i + 1}/${tasks.length} — "${folder}"`;
@@ -3591,6 +3600,7 @@ async function saveAllDests() {
         console.error('[saveAllDests]', err);
     } finally {
         _releaseWakeLock();
+        _stopBackgroundMode();
         _loaderPauseHint.style.display = 'none';
     }
 }
