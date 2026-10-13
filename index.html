@@ -3471,7 +3471,8 @@ async function saveSinglePage(tab, n, btn) {
     btn.classList.add('saving');
     try {
         const canvas   = await renderErasedPageCanvas(tab, n);
-        const filename = dest.isPriority ? 'capa.png' : `foto_pag${realPageNum(tab, n)}.png`;
+        const slug = pdfSlug(tab);
+        const filename = dest.isPriority ? `capa_${slug}.png` : `foto_pag${realPageNum(tab, n)}_${slug}.png`;
         await saveBin(canvas, dest.name, filename, root || undefined);
         markPage(tab, n);
         toast(`✓ Salvo em "${dest.name}/${filename}"`);
@@ -3490,6 +3491,16 @@ async function saveSinglePage(tab, n, btn) {
 }
 
 // ── Save helper — envia PNG em binário (sem base64, 33% menos dados) ────────
+function pdfSlug(tab) {
+    return (tab.shortName || tab.fileName || 'pdf')
+        .replace(/\.pdf$/i, '')
+        .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/, '')
+        .slice(0, 60);
+}
+
 async function saveBin(canvas, folder, filename, root) {
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
     const params = new URLSearchParams({ folder, filename });
@@ -3575,7 +3586,8 @@ async function saveAllDests() {
             loaderText.textContent = `Salvando ${i + 1}/${tasks.length} — "${folder}"`;
             setProgress(5 + ((i + 1) / tasks.length) * 88);
 
-            const filename = isPriority ? 'capa.png' : `foto_pag${realPageNum(tab, page)}.png`;
+            const slug = pdfSlug(tab);
+            const filename = isPriority ? `capa_${slug}.png` : `foto_pag${realPageNum(tab, page)}_${slug}.png`;
             await saveBin(canvas, folder, filename, tab.destApiRoot || undefined);
             markPage(tab, page);
             saved++;
