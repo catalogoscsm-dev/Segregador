@@ -4923,13 +4923,8 @@ function cqpClose(save) {
     if (!_cqpCur) return;
     const item = _cqpCur;
     _cqpCur = null;
-    if (save) {
-        galleryItems = galleryItems.filter(i => i.id !== item.id);
-        updateGalleryBadge();
-        galSave(item);
-    } else {
-        renderGallery();
-    }
+    if (save) galSave(item);
+    renderGallery();
 }
 
 _cqpTypes.forEach(b => b.addEventListener('click', () => cqpSetType(b.dataset.type)));
