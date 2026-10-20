@@ -212,6 +212,40 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // ── POST /api/create-folders ─────────────────────────────────────────────
+    if (pathname === '/api/create-folders' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const { root, folders } = JSON.parse(body);
+                if (!root || !Array.isArray(folders)) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'root e folders obrigatórios.' }));
+                    return;
+                }
+                const baseRoot = path.resolve(root.trim());
+                const created = [], existed = [], errors = [];
+                for (const folder of folders) {
+                    const destDir = path.resolve(path.join(baseRoot, folder));
+                    if (!destDir.startsWith(baseRoot)) { errors.push(folder); continue; }
+                    try {
+                        const wasNew = !fs.existsSync(destDir);
+                        fs.mkdirSync(destDir, { recursive: true });
+                        wasNew ? created.push(folder) : existed.push(folder);
+                    } catch (e) { errors.push(folder); }
+                }
+                console.log(`[create-folders] criadas: ${created.length}, já existiam: ${existed.length}, erros: ${errors.length}`);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, created, existed, errors }));
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
     // ── Ficheiros estáticos ───────────────────────────────────────────────────
     let filePath = path.join(STATIC_DIR, pathname === '/' ? 'index.html' : pathname);
     if (!path.resolve(filePath).startsWith(path.resolve(STATIC_DIR))) {
