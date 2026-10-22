@@ -756,6 +756,19 @@
         }
         .btn-dl-savedests:hover { transform: translateY(-2px); box-shadow: 0 8px 35px rgba(5,150,105,0.5); }
 
+        /* Enhance toggle button */
+        .btn-enhance-toggle {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: #94a3b8; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+        .btn-enhance-toggle:hover { transform: translateY(-2px); }
+        .btn-enhance-toggle.active {
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+            color: white; box-shadow: 0 4px 20px rgba(168,85,247,0.45);
+        }
+        .btn-enhance-toggle.active:hover { box-shadow: 0 8px 35px rgba(168,85,247,0.6); }
+
         /* Sub-group tab indicator */
         .tab-item.subgroup .tab-dot { background: var(--a3); box-shadow: 0 0 6px var(--glow2); }
         .tab-item.subgroup.active .tab-dot { background: var(--a3); box-shadow: 0 0 8px rgba(6,182,212,0.6); }
@@ -1659,6 +1672,12 @@
                 </svg>
                 <span id="btn-save-dests-lbl">Salvar destinos</span>
             </button>
+            <button class="btn-dl btn-enhance-toggle" id="btn-enhance" title="Melhorar qualidade das imagens ao salvar (Lanczos + sharpening)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                <span id="btn-enhance-lbl">Enhance OFF</span>
+            </button>
             <button class="btn-dl btn-dl-distrib" id="btn-distrib" title="Distribuir páginas em subpastas numeradas">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -2213,6 +2232,43 @@ async function restoreState() {
 
 // ── API base (servidor Node local) ───────────────────────────
 const API_BASE = 'http://localhost:8787';
+
+// ── Enhance toggle ────────────────────────────────────────────────────────────
+const _btnEnhance = document.getElementById('btn-enhance');
+const _lblEnhance = document.getElementById('btn-enhance-lbl');
+
+async function loadEnhanceState() {
+    try {
+        const r = await fetch(`${API_BASE}/api/config`);
+        const cfg = await r.json();
+        setEnhanceUI(cfg.enhance);
+        if (!cfg.sharpAvailable) {
+            _btnEnhance.title = 'Sharp não instalado — enhance indisponível';
+            _btnEnhance.disabled = true;
+        }
+    } catch {}
+}
+
+function setEnhanceUI(on) {
+    _btnEnhance.classList.toggle('active', on);
+    _lblEnhance.textContent = on ? 'Enhance ON' : 'Enhance OFF';
+}
+
+_btnEnhance.addEventListener('click', async () => {
+    const isOn = _btnEnhance.classList.contains('active');
+    try {
+        const r = await fetch(`${API_BASE}/api/set-enhance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enhance: !isOn })
+        });
+        const data = await r.json();
+        setEnhanceUI(data.enhance);
+    } catch (e) { console.error('[enhance]', e); }
+});
+
+loadEnhanceState();
+// ─────────────────────────────────────────────────────────────────────────────
 
 (async function checkServer() {
     try {

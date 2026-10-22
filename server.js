@@ -3,6 +3,21 @@ const fs   = require('fs');
 const path = require('path');
 const url  = require('url');
 
+let sharp;
+try { sharp = require('sharp'); } catch { sharp = null; }
+
+async function enhanceBuffer(buf) {
+    if (!sharp) return buf;
+    const meta = await sharp(buf).metadata();
+    const targetW = meta.width < 800 ? Math.min(meta.width * 2, 1600) : meta.width;
+    return sharp(buf)
+        .resize(targetW, null, { kernel: sharp.kernel.lanczos3 })
+        .sharpen({ sigma: 1.2, m1: 1.5, m2: 0.5 })
+        .modulate({ brightness: 1.02, saturation: 1.05 })
+        .png({ compressionLevel: 8, adaptiveFiltering: true })
+        .toBuffer();
+}
+
 // ── CONFIGURAÇÃO ─────────────────────────────────────────────────────────────
 const PORT        = 8787;
 const STATIC_DIR  = __dirname;
@@ -14,22 +29,23 @@ const DEFAULT_ROOT = 'C:\\Users\\joao.miguel\\Documents\\PROJETOS CSM\\catalogos
 function loadConfig() {
     try {
         const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
-        const cfg = JSON.parse(raw);
-        return cfg.rootFolder || DEFAULT_ROOT;
+        return JSON.parse(raw);
     } catch {
-        return DEFAULT_ROOT;
+        return { rootFolder: DEFAULT_ROOT, enhance: false };
     }
 }
 
-function saveConfig(rootFolder) {
+function saveConfig() {
     try {
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify({ rootFolder }, null, 2), 'utf8');
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify({ rootFolder: ROOT_FOLDER, enhance: ENHANCE }, null, 2), 'utf8');
     } catch (e) {
         console.warn('[config] Não foi possível salvar config.json:', e.message);
     }
 }
 
-let ROOT_FOLDER = loadConfig();
+const _cfg    = loadConfig();
+let ROOT_FOLDER = _cfg.rootFolder || DEFAULT_ROOT;
+let ENHANCE     = !!_cfg.enhance;
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MIME = {
@@ -91,6 +107,33 @@ const server = http.createServer((req, res) => {
     const parsed   = url.parse(req.url, true);
     const pathname = parsed.pathname;
 
+    // ── GET /api/config ───────────────────────────────────────────────────────
+    if (pathname === '/api/config' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ enhance: ENHANCE, sharpAvailable: !!sharp }));
+        return;
+    }
+
+    // ── POST /api/set-enhance ─────────────────────────────────────────────────
+    if (pathname === '/api/set-enhance' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const { enhance } = JSON.parse(body);
+                ENHANCE = !!enhance;
+                saveConfig();
+                console.log(`[enhance] ${ENHANCE ? 'LIGADO' : 'DESLIGADO'}`);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, enhance: ENHANCE }));
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
     // ── GET /api/folders ──────────────────────────────────────────────────────
     if (pathname === '/api/folders' && req.method === 'GET') {
         const exists  = fs.existsSync(ROOT_FOLDER);
@@ -127,7 +170,7 @@ const server = http.createServer((req, res) => {
                     return;
                 }
                 ROOT_FOLDER = newRoot;
-                saveConfig(ROOT_FOLDER);
+                saveConfig();
                 const folders = getSubfolders(ROOT_FOLDER);
                 console.log(`[set-root] Nova pasta raiz: ${ROOT_FOLDER} (${folders.length} subpastas)`);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -165,13 +208,22 @@ const server = http.createServer((req, res) => {
         const chunks = [];
         req.on('data', chunk => chunks.push(chunk));
         req.on('end', () => {
-            try {
-                fs.writeFileSync(path.join(destDir, filename), Buffer.concat(chunks));
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ ok: true }));
-            } catch (e) {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: e.message }));
+            const buf      = Buffer.concat(chunks);
+            const filePath = path.join(destDir, filename);
+            const doSave   = (finalBuf) => {
+                try {
+                    fs.writeFileSync(filePath, finalBuf);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ ok: true, enhanced: ENHANCE && !!sharp }));
+                } catch (e) {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: e.message }));
+                }
+            };
+            if (ENHANCE && sharp) {
+                enhanceBuffer(buf).then(doSave).catch(() => doSave(buf));
+            } else {
+                doSave(buf);
             }
         });
         return;
