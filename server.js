@@ -8,12 +8,9 @@ try { sharp = require('sharp'); } catch { sharp = null; }
 
 async function enhanceBuffer(buf) {
     if (!sharp) return buf;
-    const meta = await sharp(buf).metadata();
-    const targetW = meta.width < 800 ? Math.min(meta.width * 2, 1600) : meta.width;
     return sharp(buf)
-        .resize(targetW, null, { kernel: sharp.kernel.lanczos3 })
-        .sharpen({ sigma: 1.2, m1: 1.5, m2: 0.5 })
-        .modulate({ brightness: 1.02, saturation: 1.05 })
+        .sharpen({ sigma: 2.0, m1: 2.5, m2: 0.8 })
+        .modulate({ brightness: 1.02, saturation: 1.08 })
         .png({ compressionLevel: 8, adaptiveFiltering: true })
         .toBuffer();
 }
