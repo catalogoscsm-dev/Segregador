@@ -769,6 +769,112 @@
         }
         .btn-enhance-toggle.active:hover { box-shadow: 0 8px 35px rgba(168,85,247,0.6); }
 
+        /* ── Drop Zone (Salvar Imagem) ── */
+        #imgdl-btn {
+            display: flex; align-items: center; gap: 0.4rem;
+            padding: 0.38rem 0.8rem;
+            border-radius: 9px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-2);
+            cursor: pointer; font-size: 0.78rem; font-weight: 600;
+            transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+        }
+        #imgdl-btn svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; flex-shrink: 0; }
+        #imgdl-btn:hover { border-color: rgba(6,182,212,0.45); color: #67e8f9; background: rgba(6,182,212,0.07); }
+
+        #imgdl-overlay {
+            display: none; position: fixed; inset: 0; z-index: 700;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center;
+        }
+        #imgdl-overlay.open { display: flex; }
+
+        #imgdl-panel {
+            width: 480px; max-width: 95vw;
+            background: var(--bg-2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 18px;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.8);
+            overflow: hidden;
+            animation: zmPanelIn 0.2s ease;
+        }
+
+        .idz-head {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.75rem 1.1rem;
+            background: rgba(6,182,212,0.06);
+            border-bottom: 1px solid var(--border);
+        }
+        .idz-head-title { flex: 1; font-size: 0.85rem; font-weight: 700; color: var(--text); }
+        .idz-close {
+            width: 26px; height: 26px; border-radius: 7px;
+            border: 1px solid var(--border); background: transparent; color: var(--text-3);
+            cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+        }
+        .idz-close svg { width: 11px; height: 11px; stroke: currentColor; stroke-width: 2.5; fill: none; }
+        .idz-close:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
+
+        #idz-drop {
+            margin: 1rem; border-radius: 12px;
+            border: 2px dashed rgba(6,182,212,0.3);
+            background: rgba(6,182,212,0.03);
+            min-height: 160px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 0.5rem; cursor: default; transition: all 0.2s;
+            color: var(--text-3); font-size: 0.82rem; text-align: center; padding: 1.2rem;
+        }
+        #idz-drop.over { border-color: #06b6d4; background: rgba(6,182,212,0.08); color: var(--text-2); }
+        #idz-drop svg { opacity: 0.5; }
+
+        #idz-preview-wrap { margin: 0 1rem; display: none; }
+        #idz-preview {
+            width: 100%; max-height: 220px; object-fit: contain;
+            border-radius: 10px; border: 1px solid var(--border);
+            background: #07070e;
+        }
+
+        .idz-controls { padding: 0.75rem 1rem 1rem; display: flex; flex-direction: column; gap: 0.55rem; }
+        .idz-row { display: flex; align-items: center; gap: 0.5rem; }
+        .idz-label { font-size: 0.7rem; color: var(--text-3); width: 50px; flex-shrink: 0; }
+        .idz-input {
+            flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+            border-radius: 7px; color: var(--text); font-size: 0.8rem;
+            padding: 0.32rem 0.6rem; outline: none; transition: border-color 0.2s;
+        }
+        .idz-input:focus { border-color: rgba(6,182,212,0.5); }
+        .idz-select {
+            flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+            border-radius: 7px; color: var(--text); font-size: 0.8rem;
+            padding: 0.32rem 0.6rem; outline: none; cursor: pointer; transition: border-color 0.2s;
+        }
+        .idz-select:focus { border-color: rgba(6,182,212,0.5); }
+        .idz-select option { background: #111120; }
+        .idz-quick { display: flex; gap: 0.3rem; flex-shrink: 0; }
+        .idz-qtag {
+            padding: 0.2rem 0.45rem; border-radius: 5px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-3); font-size: 0.68rem; font-weight: 600;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .idz-qtag:hover { border-color: rgba(6,182,212,0.4); color: #67e8f9; background: rgba(6,182,212,0.07); }
+
+        .idz-actions { display: flex; gap: 0.5rem; margin-top: 0.2rem; }
+        .idz-btn {
+            flex: 1; padding: 0.5rem; border-radius: 8px; border: none;
+            font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+        }
+        .idz-btn.primary {
+            background: linear-gradient(135deg, #0891b2, #06b6d4);
+            color: white; box-shadow: 0 4px 18px rgba(6,182,212,0.35);
+        }
+        .idz-btn.primary:hover { box-shadow: 0 6px 28px rgba(6,182,212,0.55); transform: translateY(-1px); }
+        .idz-btn.primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+        .idz-btn.secondary {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-2);
+        }
+        .idz-btn.secondary:hover { background: rgba(255,255,255,0.09); }
+        .idz-status { font-size: 0.74rem; text-align: center; color: var(--text-3); min-height: 1.1em; }
+        .idz-status.ok  { color: #4ade80; }
+        .idz-status.err { color: #f87171; }
+
         /* Sub-group tab indicator */
         .tab-item.subgroup .tab-dot { background: var(--a3); box-shadow: 0 0 6px var(--glow2); }
         .tab-item.subgroup.active .tab-dot { background: var(--a3); box-shadow: 0 0 8px rgba(6,182,212,0.6); }
@@ -1566,6 +1672,10 @@
             <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
             Galeria
             <span id="gallery-badge">0</span>
+        </button>
+        <button id="imgdl-btn" title="Salvar imagem direto na pasta (arraste ou cole)">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Salvar Img
         </button>
         <button class="btn-enhance-toggle" id="btn-enhance" title="Melhorar qualidade das imagens ao salvar (Lanczos + sharpening)" style="display:flex;align-items:center;gap:0.4rem;padding:0.45rem 0.8rem;border-radius:8px;border:none;cursor:pointer;font-size:0.8rem;font-weight:600;letter-spacing:0.02em;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -5298,6 +5408,232 @@ function fmtBytes(b) {
     if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
     return (b/1048576).toFixed(1) + ' MB';
 }
+</script>
+
+<!-- ══ Drop Zone Modal ══ -->
+<div id="imgdl-overlay">
+    <div id="imgdl-panel">
+        <div class="idz-head">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span class="idz-head-title">Salvar Imagem na Pasta</span>
+            <button class="idz-close" id="idz-close-btn"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+
+        <div id="idz-drop">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span><strong>Arraste</strong> uma imagem aqui</span>
+            <span style="color:#475569">ou copie no Gemini e pressione <kbd style="background:#1e293b;padding:1px 5px;border-radius:4px;font-size:0.75rem;">Ctrl+V</kbd></span>
+        </div>
+
+        <div id="idz-preview-wrap">
+            <img id="idz-preview" alt="preview">
+        </div>
+
+        <div class="idz-controls">
+            <div class="idz-row">
+                <span class="idz-label">Pasta</span>
+                <select class="idz-select" id="idz-folder-sel">
+                    <option value="">— selecione —</option>
+                </select>
+            </div>
+            <div class="idz-row">
+                <span class="idz-label">Nome</span>
+                <input class="idz-input" id="idz-name" type="text" value="capa.png" placeholder="nome-do-arquivo.png">
+                <div class="idz-quick">
+                    <button class="idz-qtag" data-name="capa.png">capa</button>
+                    <button class="idz-qtag" data-name="ficha tecn.png">ficha</button>
+                    <button class="idz-qtag" data-name="recorte.png">recorte</button>
+                </div>
+            </div>
+            <div class="idz-actions">
+                <button class="idz-btn primary" id="idz-save-btn" disabled>Salvar</button>
+                <button class="idz-btn primary" id="idz-next-btn" disabled>Salvar e próxima ›</button>
+            </div>
+            <div class="idz-status" id="idz-status"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Drop Zone (Salvar Imagem) ──────────────────────────────────────────────────
+(function() {
+    const overlay   = document.getElementById('imgdl-overlay');
+    const openBtn   = document.getElementById('imgdl-btn');
+    const closeBtn  = document.getElementById('idz-close-btn');
+    const dropArea  = document.getElementById('idz-drop');
+    const previewW  = document.getElementById('idz-preview-wrap');
+    const previewEl = document.getElementById('idz-preview');
+    const folderSel = document.getElementById('idz-folder-sel');
+    const nameInput = document.getElementById('idz-name');
+    const saveBtn   = document.getElementById('idz-save-btn');
+    const nextBtn   = document.getElementById('idz-next-btn');
+    const statusEl  = document.getElementById('idz-status');
+
+    let pendingBlob = null;
+    let pendingUrl  = null;
+
+    // Abre / fecha
+    openBtn.addEventListener('click', () => {
+        overlay.classList.add('open');
+        loadFolders();
+    });
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+    function closeModal() {
+        overlay.classList.remove('open');
+        clearImage();
+    }
+
+    // Carrega subpastas
+    async function loadFolders() {
+        try {
+            const r = await fetch(`${API_BASE}/api/folders`);
+            const { folders } = await r.json();
+            folderSel.innerHTML = '<option value="">— selecione —</option>';
+            folders.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f; opt.textContent = f;
+                folderSel.appendChild(opt);
+            });
+        } catch {}
+    }
+
+    // Quick tags de nome
+    document.querySelectorAll('.idz-qtag').forEach(btn => {
+        btn.addEventListener('click', () => { nameInput.value = btn.dataset.name; });
+    });
+
+    // ── Drag & Drop da web ──
+    dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.classList.add('over');
+    });
+    dropArea.addEventListener('dragleave', () => dropArea.classList.remove('over'));
+    dropArea.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('over');
+
+        // Arquivo local arrastado
+        if (e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            if (!file.type.startsWith('image/')) return setStatus('Apenas imagens são aceitas.', 'err');
+            loadBlob(file);
+            return;
+        }
+
+        // URL de imagem arrastada da web
+        const uriList = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+        if (uriList && uriList.startsWith('http')) {
+            pendingUrl  = uriList.trim();
+            pendingBlob = null;
+            previewEl.src = pendingUrl;
+            previewW.style.display = 'block';
+            dropArea.style.display = 'none';
+            setBtns(true);
+            setStatus('URL capturada — clique Salvar.', '');
+            // tenta pré-visualizar via img element (pode falhar por CORS — ok, salva pelo server)
+            nameInput.value = nameInput.value || urlToFilename(pendingUrl);
+        }
+    });
+
+    // ── Colar do clipboard (Ctrl+V) ──
+    document.addEventListener('paste', (e) => {
+        if (!overlay.classList.contains('open')) return;
+        const items = e.clipboardData?.items || [];
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                loadBlob(item.getAsFile());
+                return;
+            }
+        }
+    });
+
+    function loadBlob(file) {
+        pendingBlob = file;
+        pendingUrl  = null;
+        const url = URL.createObjectURL(file);
+        previewEl.src = url;
+        previewW.style.display = 'block';
+        dropArea.style.display = 'none';
+        setBtns(true);
+        setStatus('Imagem pronta — escolha a pasta e salve.', '');
+    }
+
+    function clearImage() {
+        pendingBlob = null;
+        pendingUrl  = null;
+        previewEl.src = '';
+        previewW.style.display = 'none';
+        dropArea.style.display = '';
+        setBtns(false);
+        setStatus('', '');
+    }
+
+    function setBtns(on) { saveBtn.disabled = !on; nextBtn.disabled = !on; }
+
+    function setStatus(msg, cls) {
+        statusEl.textContent = msg;
+        statusEl.className   = 'idz-status' + (cls ? ' ' + cls : '');
+    }
+
+    function urlToFilename(url) {
+        try {
+            const p = new URL(url).pathname;
+            const name = p.split('/').pop();
+            return name && name.includes('.') ? name : 'imagem.png';
+        } catch { return 'imagem.png'; }
+    }
+
+    // ── Salvar ──
+    async function doSave(keepOpen) {
+        const folder = folderSel.value;
+        const name   = nameInput.value.trim();
+        if (!folder) return setStatus('Selecione uma pasta.', 'err');
+        if (!name)   return setStatus('Digite um nome para o arquivo.', 'err');
+        if (!pendingBlob && !pendingUrl) return setStatus('Nenhuma imagem carregada.', 'err');
+
+        setStatus('Salvando...', '');
+        saveBtn.disabled = true;
+        nextBtn.disabled = true;
+
+        try {
+            if (pendingBlob) {
+                // Blob direto → save-bin
+                const buf = await pendingBlob.arrayBuffer();
+                const r = await fetch(`${API_BASE}/api/save-bin?folder=${encodeURIComponent(folder)}&filename=${encodeURIComponent(name)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/octet-stream' },
+                    body: buf
+                });
+                const d = await r.json();
+                if (!d.ok) throw new Error(d.error);
+            } else {
+                // URL → fetch pelo servidor
+                const r = await fetch(`${API_BASE}/api/fetch-url`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: pendingUrl, folder, filename: name })
+                });
+                const d = await r.json();
+                if (!d.ok) throw new Error(d.error);
+            }
+
+            setStatus(`✓ Salvo em ${folder}/${name}`, 'ok');
+            if (keepOpen) {
+                setTimeout(() => { clearImage(); setStatus('', ''); }, 800);
+            } else {
+                setTimeout(closeModal, 900);
+            }
+        } catch (e) {
+            setStatus('Erro: ' + e.message, 'err');
+            setBtns(true);
+        }
+    }
+
+    saveBtn.addEventListener('click', () => doSave(false));
+    nextBtn.addEventListener('click', () => doSave(true));
+})();
 </script>
 
 </body>

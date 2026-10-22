@@ -261,6 +261,61 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // ── POST /api/fetch-url ──────────────────────────────────────────────────
+    if (pathname === '/api/fetch-url' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const { url, folder, filename } = JSON.parse(body);
+                if (!url || !folder || !filename) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'url, folder e filename obrigatórios.' }));
+                    return;
+                }
+                const destDir = path.resolve(path.join(ROOT_FOLDER, folder));
+                if (!destDir.startsWith(path.resolve(ROOT_FOLDER))) {
+                    res.writeHead(403, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Caminho fora da pasta raiz.' }));
+                    return;
+                }
+                if (!fs.existsSync(destDir)) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: `Pasta não encontrada: ${folder}` }));
+                    return;
+                }
+                const filePath = path.join(destDir, filename);
+                const proto = url.startsWith('https') ? require('https') : require('http');
+                proto.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (imgRes) => {
+                    if (imgRes.statusCode !== 200) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: `HTTP ${imgRes.statusCode} ao buscar imagem.` }));
+                        return;
+                    }
+                    const chunks = [];
+                    imgRes.on('data', c => chunks.push(c));
+                    imgRes.on('end', () => {
+                        try {
+                            fs.writeFileSync(filePath, Buffer.concat(chunks));
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ ok: true }));
+                        } catch (e) {
+                            res.writeHead(500, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ error: e.message }));
+                        }
+                    });
+                }).on('error', e => {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: e.message }));
+                });
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
     // ── POST /api/create-folders ─────────────────────────────────────────────
     if (pathname === '/api/create-folders' && req.method === 'POST') {
         let body = '';
