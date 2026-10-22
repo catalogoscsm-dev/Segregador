@@ -769,7 +769,7 @@
         }
         .btn-enhance-toggle.active:hover { box-shadow: 0 8px 35px rgba(168,85,247,0.6); }
 
-        /* ── Drop Zone (Salvar Imagem) ── */
+        /* ── Drop Zone / Image Editor ── */
         #imgdl-btn {
             display: flex; align-items: center; gap: 0.4rem;
             padding: 0.38rem 0.8rem;
@@ -783,24 +783,24 @@
 
         #imgdl-overlay {
             display: none; position: fixed; inset: 0; z-index: 700;
-            background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
-            align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+            align-items: center; justify-content: center; padding: 1rem;
         }
         #imgdl-overlay.open { display: flex; }
 
         #imgdl-panel {
-            width: 480px; max-width: 95vw;
+            width: 720px; max-width: 98vw; max-height: 96vh;
             background: var(--bg-2);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 18px;
-            box-shadow: 0 32px 80px rgba(0,0,0,0.8);
-            overflow: hidden;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.85);
+            overflow: hidden; display: flex; flex-direction: column;
             animation: zmPanelIn 0.2s ease;
         }
 
         .idz-head {
             display: flex; align-items: center; gap: 0.5rem;
-            padding: 0.75rem 1.1rem;
+            padding: 0.65rem 1rem; flex-shrink: 0;
             background: rgba(6,182,212,0.06);
             border-bottom: 1px solid var(--border);
         }
@@ -813,65 +813,137 @@
         .idz-close svg { width: 11px; height: 11px; stroke: currentColor; stroke-width: 2.5; fill: none; }
         .idz-close:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
 
+        /* Drop zone (initial state) */
         #idz-drop {
-            margin: 1rem; border-radius: 12px;
+            margin: 1.2rem; border-radius: 12px;
             border: 2px dashed rgba(6,182,212,0.3);
             background: rgba(6,182,212,0.03);
-            min-height: 160px;
+            min-height: 200px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 0.5rem; cursor: default; transition: all 0.2s;
-            color: var(--text-3); font-size: 0.82rem; text-align: center; padding: 1.2rem;
+            gap: 0.6rem; cursor: default; transition: all 0.2s;
+            color: var(--text-3); font-size: 0.82rem; text-align: center; padding: 1.5rem;
         }
         #idz-drop.over { border-color: #06b6d4; background: rgba(6,182,212,0.08); color: var(--text-2); }
-        #idz-drop svg { opacity: 0.5; }
+        #idz-drop svg { opacity: 0.4; }
 
-        #idz-preview-wrap { margin: 0 1rem; display: none; }
-        #idz-preview {
-            width: 100%; max-height: 220px; object-fit: contain;
-            border-radius: 10px; border: 1px solid var(--border);
-            background: #07070e;
+        /* Editor (shown after image load) */
+        #idz-editor { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+
+        /* Toolbar */
+        .idz-toolbar {
+            display: flex; align-items: center; gap: 0.25rem;
+            padding: 0.45rem 0.75rem; flex-shrink: 0;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid var(--border);
+        }
+        .idz-tool-btn {
+            width: 32px; height: 32px; border-radius: 7px;
+            border: 1px solid transparent; background: transparent; color: var(--text-3);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s; flex-shrink: 0;
+        }
+        .idz-tool-btn svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; }
+        .idz-tool-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-2); border-color: var(--border); }
+        .idz-tool-btn.active { background: rgba(6,182,212,0.15); color: #06b6d4; border-color: rgba(6,182,212,0.4); }
+        .idz-tb-sep { width: 1px; height: 20px; background: var(--border); margin: 0 0.2rem; flex-shrink: 0; }
+        .idz-tb-label { font-size: 0.68rem; color: var(--text-3); white-space: nowrap; }
+
+        /* Sub-toolbar */
+        #idz-subtoolbar {
+            display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+            padding: 0.4rem 0.75rem; flex-shrink: 0;
+            background: rgba(0,0,0,0.18);
+            border-bottom: 1px solid var(--border);
+            min-height: 38px;
+        }
+        .idz-sub-label { font-size: 0.7rem; color: var(--text-3); white-space: nowrap; }
+        .idz-range {
+            -webkit-appearance: none; height: 4px; border-radius: 2px;
+            background: rgba(255,255,255,0.12); outline: none; cursor: pointer;
+        }
+        .idz-range::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 13px; height: 13px;
+            border-radius: 50%; background: #06b6d4; cursor: pointer;
+        }
+        .idz-range.wide { width: 110px; }
+        .idz-range.narrow { width: 70px; }
+        .idz-sub-val { font-size: 0.7rem; color: var(--text-2); min-width: 28px; text-align: right; }
+        .idz-sub-btn {
+            padding: 0.22rem 0.55rem; border-radius: 6px;
+            border: 1px solid var(--border); background: transparent; color: var(--text-3);
+            font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+        }
+        .idz-sub-btn:hover { border-color: rgba(6,182,212,0.4); color: #67e8f9; background: rgba(6,182,212,0.07); }
+        .idz-sub-btn.confirm { border-color: rgba(34,197,94,0.4); color: #4ade80; }
+        .idz-sub-btn.confirm:hover { background: rgba(34,197,94,0.08); }
+        .idz-color-pick { width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--border); cursor: pointer; padding: 0; }
+
+        /* Canvas area */
+        .idz-canvas-wrap {
+            flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center;
+            background: #050509; position: relative; min-height: 0;
+        }
+        #idz-canvas {
+            display: block; max-width: 100%; max-height: 100%;
+            object-fit: contain; image-rendering: auto;
+        }
+        #idz-canvas.cur-crosshair { cursor: crosshair; }
+        #idz-canvas.cur-eraser    { cursor: cell; }
+        #idz-canvas.cur-draw      { cursor: crosshair; }
+        #idz-canvas.cur-default   { cursor: default; }
+
+        /* Crop overlay canvas */
+        #idz-crop-overlay {
+            position: absolute; top: 0; left: 0; pointer-events: none;
         }
 
-        .idz-controls { padding: 0.75rem 1rem 1rem; display: flex; flex-direction: column; gap: 0.55rem; }
+        /* Bottom controls */
+        .idz-controls {
+            padding: 0.6rem 0.9rem 0.75rem; flex-shrink: 0;
+            border-top: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; gap: 0.45rem;
+        }
         .idz-row { display: flex; align-items: center; gap: 0.5rem; }
-        .idz-label { font-size: 0.7rem; color: var(--text-3); width: 50px; flex-shrink: 0; }
+        .idz-label { font-size: 0.7rem; color: var(--text-3); width: 46px; flex-shrink: 0; }
         .idz-input {
             flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
             border-radius: 7px; color: var(--text); font-size: 0.8rem;
-            padding: 0.32rem 0.6rem; outline: none; transition: border-color 0.2s;
+            padding: 0.3rem 0.55rem; outline: none; transition: border-color 0.2s;
         }
         .idz-input:focus { border-color: rgba(6,182,212,0.5); }
         .idz-select {
             flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
             border-radius: 7px; color: var(--text); font-size: 0.8rem;
-            padding: 0.32rem 0.6rem; outline: none; cursor: pointer; transition: border-color 0.2s;
+            padding: 0.3rem 0.55rem; outline: none; cursor: pointer; transition: border-color 0.2s;
         }
         .idz-select:focus { border-color: rgba(6,182,212,0.5); }
         .idz-select option { background: #111120; }
         .idz-quick { display: flex; gap: 0.3rem; flex-shrink: 0; }
         .idz-qtag {
-            padding: 0.2rem 0.45rem; border-radius: 5px; border: 1px solid var(--border);
-            background: transparent; color: var(--text-3); font-size: 0.68rem; font-weight: 600;
+            padding: 0.18rem 0.42rem; border-radius: 5px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-3); font-size: 0.67rem; font-weight: 600;
             cursor: pointer; transition: all 0.15s;
         }
         .idz-qtag:hover { border-color: rgba(6,182,212,0.4); color: #67e8f9; background: rgba(6,182,212,0.07); }
 
-        .idz-actions { display: flex; gap: 0.5rem; margin-top: 0.2rem; }
+        .idz-actions { display: flex; gap: 0.5rem; }
         .idz-btn {
-            flex: 1; padding: 0.5rem; border-radius: 8px; border: none;
-            font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+            flex: 1; padding: 0.45rem; border-radius: 8px; border: none;
+            font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
         }
         .idz-btn.primary {
             background: linear-gradient(135deg, #0891b2, #06b6d4);
-            color: white; box-shadow: 0 4px 18px rgba(6,182,212,0.35);
+            color: white; box-shadow: 0 4px 18px rgba(6,182,212,0.3);
         }
-        .idz-btn.primary:hover { box-shadow: 0 6px 28px rgba(6,182,212,0.55); transform: translateY(-1px); }
+        .idz-btn.primary:hover { box-shadow: 0 6px 26px rgba(6,182,212,0.5); transform: translateY(-1px); }
         .idz-btn.primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
         .idz-btn.secondary {
             background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-2);
+            flex: 0 0 auto; padding: 0.45rem 0.8rem;
         }
         .idz-btn.secondary:hover { background: rgba(255,255,255,0.09); }
-        .idz-status { font-size: 0.74rem; text-align: center; color: var(--text-3); min-height: 1.1em; }
+        .idz-status { font-size: 0.73rem; text-align: center; color: var(--text-3); min-height: 1em; }
         .idz-status.ok  { color: #4ade80; }
         .idz-status.err { color: #f87171; }
 
@@ -5410,206 +5482,481 @@ function fmtBytes(b) {
 }
 </script>
 
-<!-- ══ Drop Zone Modal ══ -->
+<!-- ══ Image Editor Modal ══ -->
 <div id="imgdl-overlay">
-    <div id="imgdl-panel">
-        <div class="idz-head">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            <span class="idz-head-title">Salvar Imagem na Pasta</span>
-            <button class="idz-close" id="idz-close-btn"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-        </div>
-
-        <div id="idz-drop">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            <span><strong>Arraste</strong> uma imagem aqui</span>
-            <span style="color:#475569">ou copie no Gemini e pressione <kbd style="background:#1e293b;padding:1px 5px;border-radius:4px;font-size:0.75rem;">Ctrl+V</kbd></span>
-        </div>
-
-        <div id="idz-preview-wrap">
-            <img id="idz-preview" alt="preview">
-        </div>
-
-        <div class="idz-controls">
-            <div class="idz-row">
-                <span class="idz-label">Pasta</span>
-                <select class="idz-select" id="idz-folder-sel">
-                    <option value="">— selecione —</option>
-                </select>
-            </div>
-            <div class="idz-row">
-                <span class="idz-label">Nome</span>
-                <input class="idz-input" id="idz-name" type="text" value="capa.png" placeholder="nome-do-arquivo.png">
-                <div class="idz-quick">
-                    <button class="idz-qtag" data-name="capa.png">capa</button>
-                    <button class="idz-qtag" data-name="ficha tecn.png">ficha</button>
-                    <button class="idz-qtag" data-name="recorte.png">recorte</button>
-                </div>
-            </div>
-            <div class="idz-actions">
-                <button class="idz-btn primary" id="idz-save-btn" disabled>Salvar</button>
-                <button class="idz-btn primary" id="idz-next-btn" disabled>Salvar e próxima ›</button>
-            </div>
-            <div class="idz-status" id="idz-status"></div>
-        </div>
+  <div id="imgdl-panel">
+    <!-- Header -->
+    <div class="idz-head">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="idz-head-title">Editor de Imagem</span>
+      <button class="idz-close" id="idz-close-btn"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
+
+    <!-- Drop Zone (estado inicial) -->
+    <div id="idz-drop">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span><strong>Arraste</strong> uma imagem aqui</span>
+      <span style="color:#475569">ou copie no Gemini → <kbd style="background:#1e293b;padding:2px 6px;border-radius:4px;font-size:0.74rem;">Ctrl+V</kbd></span>
+    </div>
+
+    <!-- Editor (visível após carregar imagem) -->
+    <div id="idz-editor">
+      <!-- Toolbar principal -->
+      <div class="idz-toolbar">
+        <button class="idz-tool-btn active" data-tool="cursor" title="Cursor (sem ferramenta)">
+          <svg viewBox="0 0 24 24"><path d="M5 3l14 9-7 1-4 7z"/></svg>
+        </button>
+        <button class="idz-tool-btn" data-tool="crop" title="Recortar (C)">
+          <svg viewBox="0 0 24 24"><polyline points="6 3 6 18 21 18"/><polyline points="3 6 18 6 18 21"/></svg>
+        </button>
+        <button class="idz-tool-btn" data-tool="eraser" title="Borracha (E)">
+          <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16l10-10 7 7-3 3"/><path d="M6.0 11.0 l7 7"/></svg>
+        </button>
+        <button class="idz-tool-btn" data-tool="draw" title="Lápis (D)">
+          <svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
+        <button class="idz-tool-btn" data-tool="adjust" title="Ajustes (A)">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        </button>
+        <div class="idz-tb-sep"></div>
+        <button class="idz-tool-btn" id="idz-flip-h" title="Espelhar horizontal">
+          <svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M4 7l-2 2 2 2"/><path d="M8 7H2"/><path d="M20 7l2 2-2 2"/><path d="M16 7h6"/></svg>
+        </button>
+        <button class="idz-tool-btn" id="idz-rotate-r" title="Girar 90° direita">
+          <svg viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M21 8A10 10 0 1 1 12 2"/></svg>
+        </button>
+        <div class="idz-tb-sep"></div>
+        <button class="idz-tool-btn" id="idz-undo-btn" title="Desfazer (Ctrl+Z)">
+          <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5"/></svg>
+        </button>
+        <button class="idz-tool-btn" id="idz-reset-btn" title="Resetar imagem original">
+          <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </button>
+        <div style="flex:1"></div>
+        <span class="idz-tb-label" id="idz-size-label" style="font-size:0.65rem;color:#334155"></span>
+      </div>
+
+      <!-- Sub-toolbar (muda por ferramenta) -->
+      <div id="idz-subtoolbar">
+        <!-- conteúdo injetado via JS -->
+      </div>
+
+      <!-- Canvas -->
+      <div class="idz-canvas-wrap" id="idz-canvas-wrap">
+        <canvas id="idz-canvas" class="cur-default"></canvas>
+      </div>
+
+      <!-- Controles de salvar -->
+      <div class="idz-controls">
+        <div class="idz-row">
+          <span class="idz-label">Pasta</span>
+          <select class="idz-select" id="idz-folder-sel"><option value="">— selecione —</option></select>
+        </div>
+        <div class="idz-row">
+          <span class="idz-label">Nome</span>
+          <input class="idz-input" id="idz-name" type="text" value="capa.png" placeholder="nome.png">
+          <div class="idz-quick">
+            <button class="idz-qtag" data-name="capa.png">capa</button>
+            <button class="idz-qtag" data-name="ficha tecn.png">ficha</button>
+            <button class="idz-qtag" data-name="recorte.png">recorte</button>
+          </div>
+        </div>
+        <div class="idz-actions">
+          <button class="idz-btn secondary" id="idz-new-btn">← Nova imagem</button>
+          <button class="idz-btn primary" id="idz-save-btn" disabled>Salvar</button>
+          <button class="idz-btn primary" id="idz-next-btn" disabled>Salvar e próxima ›</button>
+        </div>
+        <div class="idz-status" id="idz-status"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-// ── Drop Zone (Salvar Imagem) ──────────────────────────────────────────────────
-(function() {
+// ══ Image Editor Modal ════════════════════════════════════════════════════════
+(function () {
     const overlay   = document.getElementById('imgdl-overlay');
     const openBtn   = document.getElementById('imgdl-btn');
     const closeBtn  = document.getElementById('idz-close-btn');
     const dropArea  = document.getElementById('idz-drop');
-    const previewW  = document.getElementById('idz-preview-wrap');
-    const previewEl = document.getElementById('idz-preview');
+    const editor    = document.getElementById('idz-editor');
+    const canvas    = document.getElementById('idz-canvas');
+    const ctx       = canvas.getContext('2d');
     const folderSel = document.getElementById('idz-folder-sel');
     const nameInput = document.getElementById('idz-name');
     const saveBtn   = document.getElementById('idz-save-btn');
     const nextBtn   = document.getElementById('idz-next-btn');
+    const newBtn    = document.getElementById('idz-new-btn');
     const statusEl  = document.getElementById('idz-status');
+    const subtoolbar = document.getElementById('idz-subtoolbar');
+    const sizeLabel = document.getElementById('idz-size-label');
 
-    let pendingBlob = null;
-    let pendingUrl  = null;
+    // ── estado ────────────────────────────────────────────────────────────────
+    let baseImageData = null;   // ImageData original (para reset)
+    let history       = [];     // pilha de ImageData para undo
+    let activeTool    = 'cursor';
+    let isDrawing     = false;
+    let lastX = 0, lastY = 0;
+    let cropStart     = null;
+    let cropRect      = null;
+    // ajustes
+    let adjBrightness = 100, adjContrast = 100, adjSaturation = 100, adjSharpness = 0;
+    // ferramentas
+    let brushSize     = 20;
+    let drawColor     = '#ff4444';
+    let pendingUrl    = null;
 
-    // Abre / fecha
-    openBtn.addEventListener('click', () => {
-        overlay.classList.add('open');
-        loadFolders();
-    });
+    // ── abrir / fechar ────────────────────────────────────────────────────────
+    openBtn.addEventListener('click', () => { overlay.classList.add('open'); loadFolders(); });
     closeBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    function closeModal() { overlay.classList.remove('open'); }
 
-    function closeModal() {
-        overlay.classList.remove('open');
-        clearImage();
-    }
+    newBtn.addEventListener('click', () => {
+        editor.style.display = 'none';
+        dropArea.style.display = '';
+        saveBtn.disabled = true; nextBtn.disabled = true;
+        setStatus('');
+        history = []; baseImageData = null;
+    });
 
-    // Carrega subpastas
+    // ── pastas ────────────────────────────────────────────────────────────────
     async function loadFolders() {
         try {
             const r = await fetch(`${API_BASE}/api/folders`);
             const { folders } = await r.json();
             folderSel.innerHTML = '<option value="">— selecione —</option>';
-            folders.forEach(f => {
-                const opt = document.createElement('option');
-                opt.value = f; opt.textContent = f;
-                folderSel.appendChild(opt);
-            });
+            folders.forEach(f => { const o = document.createElement('option'); o.value = f; o.textContent = f; folderSel.appendChild(o); });
         } catch {}
     }
 
-    // Quick tags de nome
-    document.querySelectorAll('.idz-qtag').forEach(btn => {
-        btn.addEventListener('click', () => { nameInput.value = btn.dataset.name; });
-    });
+    document.querySelectorAll('.idz-qtag').forEach(b => b.addEventListener('click', () => { nameInput.value = b.dataset.name; }));
 
-    // ── Drag & Drop da web ──
-    dropArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropArea.classList.add('over');
-    });
+    // ── drag & drop / paste ───────────────────────────────────────────────────
+    dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('over'); });
     dropArea.addEventListener('dragleave', () => dropArea.classList.remove('over'));
-    dropArea.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        dropArea.classList.remove('over');
-
-        // Arquivo local arrastado
+    dropArea.addEventListener('drop', async e => {
+        e.preventDefault(); dropArea.classList.remove('over');
         if (e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-            if (!file.type.startsWith('image/')) return setStatus('Apenas imagens são aceitas.', 'err');
-            loadBlob(file);
+            const f = e.dataTransfer.files[0];
+            if (f.type.startsWith('image/')) loadFile(f);
             return;
         }
-
-        // URL de imagem arrastada da web
-        const uriList = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
-        if (uriList && uriList.startsWith('http')) {
-            pendingUrl  = uriList.trim();
-            pendingBlob = null;
-            previewEl.src = pendingUrl;
-            previewW.style.display = 'block';
-            dropArea.style.display = 'none';
-            setBtns(true);
-            setStatus('URL capturada — clique Salvar.', '');
-            // tenta pré-visualizar via img element (pode falhar por CORS — ok, salva pelo server)
-            nameInput.value = nameInput.value || urlToFilename(pendingUrl);
-        }
+        const uri = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+        if (uri && uri.startsWith('http')) { pendingUrl = uri.trim(); loadFromUrl(uri); }
     });
 
-    // ── Colar do clipboard (Ctrl+V) ──
-    document.addEventListener('paste', (e) => {
+    document.addEventListener('paste', e => {
         if (!overlay.classList.contains('open')) return;
-        const items = e.clipboardData?.items || [];
-        for (const item of items) {
-            if (item.type.startsWith('image/')) {
-                loadBlob(item.getAsFile());
-                return;
-            }
+        for (const item of (e.clipboardData?.items || [])) {
+            if (item.type.startsWith('image/')) { loadFile(item.getAsFile()); return; }
         }
     });
 
-    function loadBlob(file) {
-        pendingBlob = file;
-        pendingUrl  = null;
+    // ── carregar imagem ───────────────────────────────────────────────────────
+    function loadFile(file) {
         const url = URL.createObjectURL(file);
-        previewEl.src = url;
-        previewW.style.display = 'block';
+        loadFromUrl(url);
+    }
+
+    function loadFromUrl(src) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            canvas.width  = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            ctx.drawImage(img, 0, 0);
+            baseImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            history = [];
+            pushHistory();
+            showEditor();
+        };
+        img.onerror = () => {
+            // CORS bloqueou — tenta via servidor
+            if (pendingUrl) setStatus('Imagem carregada por URL — será baixada ao salvar.', '');
+            // mostra editor vazio com aviso
+            canvas.width = 400; canvas.height = 300;
+            ctx.fillStyle = '#0d0d1a';
+            ctx.fillRect(0, 0, 400, 300);
+            ctx.fillStyle = '#475569';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Imagem não pode ser pré-visualizada (CORS)', 200, 150);
+            ctx.fillText('Será salva diretamente ao clicar Salvar.', 200, 170);
+            showEditor();
+        };
+        img.src = src;
+    }
+
+    function showEditor() {
         dropArea.style.display = 'none';
-        setBtns(true);
-        setStatus('Imagem pronta — escolha a pasta e salve.', '');
+        editor.style.display   = 'flex';
+        saveBtn.disabled = false; nextBtn.disabled = false;
+        sizeLabel.textContent  = `${canvas.width} × ${canvas.height} px`;
+        setTool('cursor');
+        resetAdjust();
+        setStatus('');
     }
 
-    function clearImage() {
-        pendingBlob = null;
-        pendingUrl  = null;
-        previewEl.src = '';
-        previewW.style.display = 'none';
-        dropArea.style.display = '';
-        setBtns(false);
-        setStatus('', '');
+    // ── histórico / undo ──────────────────────────────────────────────────────
+    function pushHistory() {
+        history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        if (history.length > 30) history.shift();
     }
 
+    document.getElementById('idz-undo-btn').addEventListener('click', undo);
+    function undo() {
+        if (history.length <= 1) return;
+        history.pop();
+        ctx.putImageData(history[history.length - 1], 0, 0);
+    }
+
+    document.getElementById('idz-reset-btn').addEventListener('click', () => {
+        if (!baseImageData) return;
+        canvas.width  = baseImageData.width;
+        canvas.height = baseImageData.height;
+        ctx.putImageData(baseImageData, 0, 0);
+        history = []; pushHistory();
+        sizeLabel.textContent = `${canvas.width} × ${canvas.height} px`;
+        resetAdjust(); setStatus('Imagem resetada.');
+    });
+
+    // ── girar / espelhar ──────────────────────────────────────────────────────
+    document.getElementById('idz-flip-h').addEventListener('click', () => {
+        pushHistory();
+        const tmp = document.createElement('canvas');
+        tmp.width = canvas.width; tmp.height = canvas.height;
+        const tc = tmp.getContext('2d');
+        tc.translate(canvas.width, 0); tc.scale(-1, 1);
+        tc.drawImage(canvas, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(tmp, 0, 0);
+        pushHistory();
+    });
+
+    document.getElementById('idz-rotate-r').addEventListener('click', () => {
+        pushHistory();
+        const tmp = document.createElement('canvas');
+        tmp.width = canvas.height; tmp.height = canvas.width;
+        const tc = tmp.getContext('2d');
+        tc.translate(tmp.width, 0); tc.rotate(Math.PI / 2);
+        tc.drawImage(canvas, 0, 0);
+        canvas.width  = tmp.width;
+        canvas.height = tmp.height;
+        ctx.drawImage(tmp, 0, 0);
+        sizeLabel.textContent = `${canvas.width} × ${canvas.height} px`;
+        pushHistory();
+    });
+
+    // ── ferramentas ───────────────────────────────────────────────────────────
+    document.querySelectorAll('.idz-tool-btn[data-tool]').forEach(btn => {
+        btn.addEventListener('click', () => setTool(btn.dataset.tool));
+    });
+
+    function setTool(name) {
+        activeTool = name;
+        document.querySelectorAll('.idz-tool-btn[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === name));
+        canvas.className = name === 'crop' || name === 'cursor' ? 'cur-crosshair' :
+                           name === 'eraser' ? 'cur-eraser' :
+                           name === 'draw'   ? 'cur-draw'   : 'cur-default';
+        renderSubtoolbar(name);
+    }
+
+    // ── sub-toolbar por ferramenta ────────────────────────────────────────────
+    function renderSubtoolbar(tool) {
+        subtoolbar.innerHTML = '';
+        if (tool === 'cursor') {
+            subtoolbar.innerHTML = '<span class="idz-sub-label" style="color:#334155;font-size:0.68rem">Selecione uma ferramenta na barra acima</span>';
+        }
+        if (tool === 'crop') {
+            subtoolbar.innerHTML = `
+                <span class="idz-sub-label">Arraste para selecionar a área de recorte</span>
+                <button class="idz-sub-btn confirm" id="idz-crop-apply" disabled>✓ Aplicar recorte</button>
+                <button class="idz-sub-btn" id="idz-crop-cancel">Cancelar</button>`;
+            document.getElementById('idz-crop-apply').addEventListener('click', applyCrop);
+            document.getElementById('idz-crop-cancel').addEventListener('click', () => { cropRect = null; cropStart = null; redrawCropOverlay(); });
+        }
+        if (tool === 'eraser' || tool === 'draw') {
+            const isErase = tool === 'eraser';
+            subtoolbar.innerHTML = `
+                <span class="idz-sub-label">Tamanho</span>
+                <input type="range" class="idz-range narrow" id="idz-brush-sz" min="2" max="80" value="${brushSize}">
+                <span class="idz-sub-val" id="idz-brush-val">${brushSize}px</span>
+                ${!isErase ? `<span class="idz-sub-label" style="margin-left:0.4rem">Cor</span><input type="color" class="idz-color-pick" id="idz-draw-color" value="${drawColor}">` : ''}
+                <span class="idz-sub-label" style="margin-left:0.4rem;color:#475569;font-size:0.67rem">Clique ou arraste sobre a imagem</span>`;
+            document.getElementById('idz-brush-sz').addEventListener('input', e => { brushSize = +e.target.value; document.getElementById('idz-brush-val').textContent = brushSize + 'px'; });
+            if (!isErase) document.getElementById('idz-draw-color').addEventListener('input', e => { drawColor = e.target.value; });
+        }
+        if (tool === 'adjust') {
+            subtoolbar.innerHTML = `
+                <span class="idz-sub-label">Brilho</span>
+                <input type="range" class="idz-range wide" id="adj-bright" min="50" max="150" value="${adjBrightness}">
+                <span class="idz-sub-val" id="adj-bright-v">${adjBrightness}%</span>
+                <span class="idz-sub-label">Contraste</span>
+                <input type="range" class="idz-range wide" id="adj-cont" min="50" max="200" value="${adjContrast}">
+                <span class="idz-sub-val" id="adj-cont-v">${adjContrast}%</span>
+                <span class="idz-sub-label">Saturação</span>
+                <input type="range" class="idz-range wide" id="adj-sat" min="0" max="200" value="${adjSaturation}">
+                <span class="idz-sub-val" id="adj-sat-v">${adjSaturation}%</span>
+                <button class="idz-sub-btn confirm" id="adj-apply">✓ Aplicar</button>
+                <button class="idz-sub-btn" id="adj-reset-vals">Reset</button>`;
+            function bindSlider(id, valId, setter, redraw) {
+                document.getElementById(id).addEventListener('input', e => {
+                    setter(+e.target.value);
+                    document.getElementById(valId).textContent = +e.target.value + '%';
+                    previewAdjust();
+                });
+            }
+            bindSlider('adj-bright', 'adj-bright-v', v => adjBrightness = v);
+            bindSlider('adj-cont',   'adj-cont-v',   v => adjContrast   = v);
+            bindSlider('adj-sat',    'adj-sat-v',     v => adjSaturation = v);
+            document.getElementById('adj-apply').addEventListener('click', bakeAdjust);
+            document.getElementById('adj-reset-vals').addEventListener('click', () => {
+                adjBrightness = 100; adjContrast = 100; adjSaturation = 100;
+                renderSubtoolbar('adjust');
+                previewAdjust();
+            });
+        }
+    }
+
+    function resetAdjust() { adjBrightness = 100; adjContrast = 100; adjSaturation = 100; }
+
+    // preview de ajuste via CSS filter (não bake ainda)
+    function previewAdjust() {
+        canvas.style.filter = `brightness(${adjBrightness}%) contrast(${adjContrast}%) saturate(${adjSaturation}%)`;
+    }
+
+    // bake: aplica o filter no canvas permanentemente
+    function bakeAdjust() {
+        pushHistory();
+        const tmp = document.createElement('canvas');
+        tmp.width = canvas.width; tmp.height = canvas.height;
+        const tc = tmp.getContext('2d');
+        tc.filter = `brightness(${adjBrightness}%) contrast(${adjContrast}%) saturate(${adjSaturation}%)`;
+        tc.drawImage(canvas, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(tmp, 0, 0);
+        canvas.style.filter = 'none';
+        resetAdjust();
+        renderSubtoolbar('adjust');
+        pushHistory();
+        setStatus('Ajustes aplicados.', 'ok');
+    }
+
+    // ── canvas coords ─────────────────────────────────────────────────────────
+    function coords(e) {
+        const r = canvas.getBoundingClientRect();
+        return { x: (e.clientX - r.left) * (canvas.width / r.width), y: (e.clientY - r.top) * (canvas.height / r.height) };
+    }
+
+    // ── mouse events ──────────────────────────────────────────────────────────
+    canvas.addEventListener('mousedown', e => {
+        if (activeTool === 'cursor') return;
+        isDrawing = true;
+        const { x, y } = coords(e);
+        if (activeTool === 'crop') {
+            cropStart = { x, y }; cropRect = null;
+        } else {
+            pushHistory();
+            lastX = x; lastY = y;
+            if (activeTool === 'eraser') { ctx.globalCompositeOperation = 'destination-out'; }
+            else { ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = drawColor; }
+            ctx.lineWidth = brushSize; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.beginPath(); ctx.moveTo(x, y);
+        }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+        if (!isDrawing) return;
+        const { x, y } = coords(e);
+        if (activeTool === 'crop') {
+            cropRect = { x: Math.min(cropStart.x, x), y: Math.min(cropStart.y, y), w: Math.abs(x - cropStart.x), h: Math.abs(y - cropStart.y) };
+            redrawCropOverlay();
+            const applyBtn = document.getElementById('idz-crop-apply');
+            if (applyBtn) applyBtn.disabled = cropRect.w < 5 || cropRect.h < 5;
+        } else {
+            ctx.lineTo(x, y); ctx.stroke();
+            lastX = x; lastY = y;
+        }
+    });
+
+    canvas.addEventListener('mouseup', e => {
+        if (!isDrawing) return;
+        isDrawing = false;
+        if (activeTool === 'eraser' || activeTool === 'draw') {
+            ctx.globalCompositeOperation = 'source-over';
+            pushHistory();
+        }
+    });
+    canvas.addEventListener('mouseleave', () => { if (isDrawing && activeTool !== 'crop') { isDrawing = false; ctx.globalCompositeOperation = 'source-over'; pushHistory(); } });
+
+    // ── crop overlay ──────────────────────────────────────────────────────────
+    function redrawCropOverlay() {
+        // Usa CSS outline em vez de overlay canvas — mais simples
+        if (!cropRect || cropRect.w < 2 || cropRect.h < 2) { canvas.style.outline = 'none'; return; }
+        // Desenha sobre o canvas temporariamente para mostrar seleção
+        const snap = history[history.length - 1];
+        ctx.putImageData(snap, 0, 0);
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+        ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+        ctx.strokeRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+        ctx.setLineDash([]);
+        ctx.restore();
+    }
+
+    function applyCrop() {
+        if (!cropRect || cropRect.w < 5 || cropRect.h < 5) return;
+        // Restaura imagem sem overlay antes de recortar
+        const snap = history[history.length - 1];
+        ctx.putImageData(snap, 0, 0);
+
+        const imageData = ctx.getImageData(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+        canvas.width  = cropRect.w;
+        canvas.height = cropRect.h;
+        ctx.putImageData(imageData, 0, 0);
+        sizeLabel.textContent = `${canvas.width} × ${canvas.height} px`;
+        cropRect = null; cropStart = null;
+        history = []; pushHistory();
+        setTool('cursor');
+        setStatus(`Recortado: ${canvas.width} × ${canvas.height} px`, 'ok');
+    }
+
+    // ── teclado ───────────────────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+        if (!overlay.classList.contains('open')) return;
+        if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); return; }
+        if (e.key === 'Escape') { if (activeTool !== 'cursor') { setTool('cursor'); } else { closeModal(); } return; }
+        const map = { c: 'crop', e: 'eraser', d: 'draw', a: 'adjust' };
+        if (!e.ctrlKey && map[e.key]) setTool(map[e.key]);
+    });
+
+    // ── paste ─────────────────────────────────────────────────────────────────
+    document.addEventListener('paste', e => {
+        if (!overlay.classList.contains('open')) return;
+        for (const item of (e.clipboardData?.items || [])) {
+            if (item.type.startsWith('image/')) { pendingUrl = null; loadFile(item.getAsFile()); return; }
+        }
+    });
+
+    // ── salvar ────────────────────────────────────────────────────────────────
+    function setStatus(msg, cls = '') { statusEl.textContent = msg; statusEl.className = 'idz-status' + (cls ? ' ' + cls : ''); }
     function setBtns(on) { saveBtn.disabled = !on; nextBtn.disabled = !on; }
 
-    function setStatus(msg, cls) {
-        statusEl.textContent = msg;
-        statusEl.className   = 'idz-status' + (cls ? ' ' + cls : '');
-    }
-
-    function urlToFilename(url) {
-        try {
-            const p = new URL(url).pathname;
-            const name = p.split('/').pop();
-            return name && name.includes('.') ? name : 'imagem.png';
-        } catch { return 'imagem.png'; }
-    }
-
-    // ── Salvar ──
     async function doSave(keepOpen) {
         const folder = folderSel.value;
         const name   = nameInput.value.trim();
         if (!folder) return setStatus('Selecione uma pasta.', 'err');
-        if (!name)   return setStatus('Digite um nome para o arquivo.', 'err');
-        if (!pendingBlob && !pendingUrl) return setStatus('Nenhuma imagem carregada.', 'err');
+        if (!name)   return setStatus('Digite um nome.', 'err');
 
-        setStatus('Salvando...', '');
-        saveBtn.disabled = true;
-        nextBtn.disabled = true;
+        canvas.style.filter = 'none';
+        setStatus('Salvando...'); setBtns(false);
 
         try {
-            if (pendingBlob) {
-                // Blob direto → save-bin
-                const buf = await pendingBlob.arrayBuffer();
-                const r = await fetch(`${API_BASE}/api/save-bin?folder=${encodeURIComponent(folder)}&filename=${encodeURIComponent(name)}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/octet-stream' },
-                    body: buf
-                });
-                const d = await r.json();
-                if (!d.ok) throw new Error(d.error);
-            } else {
-                // URL → fetch pelo servidor
+            // Se imagem bloqueada por CORS e temos URL, usa fetch pelo servidor
+            if (pendingUrl && canvas.width === 400 && canvas.height === 300) {
                 const r = await fetch(`${API_BASE}/api/fetch-url`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -5617,17 +5964,21 @@ function fmtBytes(b) {
                 });
                 const d = await r.json();
                 if (!d.ok) throw new Error(d.error);
-            }
-
-            setStatus(`✓ Salvo em ${folder}/${name}`, 'ok');
-            if (keepOpen) {
-                setTimeout(() => { clearImage(); setStatus('', ''); }, 800);
             } else {
-                setTimeout(closeModal, 900);
+                // Canvas → PNG blob → save-bin
+                const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+                const buf  = await blob.arrayBuffer();
+                const r    = await fetch(`${API_BASE}/api/save-bin?folder=${encodeURIComponent(folder)}&filename=${encodeURIComponent(name)}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: buf
+                });
+                const d = await r.json();
+                if (!d.ok) throw new Error(d.error);
             }
-        } catch (e) {
-            setStatus('Erro: ' + e.message, 'err');
-            setBtns(true);
+            setStatus(`✓ Salvo em ${folder}/${name}`, 'ok');
+            if (keepOpen) { setTimeout(() => { newBtn.click(); setStatus(''); }, 700); }
+            else { setTimeout(closeModal, 900); }
+        } catch (err) {
+            setStatus('Erro: ' + err.message, 'err'); setBtns(true);
         }
     }
 
