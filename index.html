@@ -1061,6 +1061,31 @@
         #zoom-modal.erase-rect-mode #crop-canvas { display: block; cursor: crosshair; }
         #zoom-modal.erase-rect-mode #zoom-scroll { cursor: crosshair; }
 
+        /* Lasso erase mode */
+        #zm-eraser-lasso.active { border-color: #8b5cf6 !important; color: #a78bfa !important; background: rgba(139,92,246,0.12) !important; }
+        #zoom-modal.erase-lasso-mode #erase-canvas { pointer-events: auto; cursor: crosshair; }
+        #zoom-modal.erase-lasso-mode #zoom-scroll  { cursor: crosshair; }
+        #zm-lasso-confirm-bar {
+            display: none; position: absolute; bottom: 2.8rem; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(12,16,26,0.93); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+            padding: 0.28rem 0.55rem; gap: 0.35rem; align-items: center; z-index: 60;
+            white-space: nowrap; pointer-events: auto;
+        }
+        #zm-lasso-confirm-bar.visible { display: flex; }
+        #zm-lasso-confirm-bar .zm-lb {
+            background: transparent; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px;
+            color: #e2e8f0; cursor: pointer; padding: 2px 10px; font-size: 0.76rem;
+            transition: background 0.12s;
+        }
+        #zm-lasso-confirm-bar .zm-lb:hover { background: rgba(255,255,255,0.1); }
+        #zm-lasso-confirm-bar .zm-lb.ok  { border-color: rgba(34,197,94,0.5); color: #4ade80; }
+        #zm-lasso-confirm-bar .zm-lb.ok:hover  { background: rgba(34,197,94,0.15); }
+        #zm-lasso-confirm-bar .zm-lb.cxl { border-color: rgba(239,68,68,0.4); color: #f87171; }
+        #zm-lasso-confirm-bar .zm-lb.cxl:hover { background: rgba(239,68,68,0.12); }
+        #zm-lasso-confirm-bar .zm-lbl { font-size: 0.73rem; color: var(--text-3); }
+
         /* Insert cropped image mode */
         #insert-canvas {
             position: absolute; inset: 0;
@@ -1964,6 +1989,9 @@
                 <button class="zm-btn" id="zm-eraser-rect" title="Borracha retangular (R)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="1"/><line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="3 2"/></svg>
                 </button>
+                <button class="zm-btn" id="zm-eraser-lasso" title="Borracha laço poligonal (L)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5c3-3 10-1 14 4s3 11-1 13-7-2-9-6-5-5-7-3-2-4 3-8z" stroke-dasharray="4 2"/><circle cx="5" cy="5" r="2" fill="currentColor" stroke="none"/></svg>
+                </button>
                 <button class="zm-btn" id="zm-eraser-sm" title="Diminuir borracha" style="display:none">−</button>
                 <span class="zm-eraser-ctrl" id="zm-eraser-sz" style="display:none">M</span>
                 <button class="zm-btn" id="zm-eraser-lg" title="Aumentar borracha" style="display:none">+</button>
@@ -1998,6 +2026,13 @@
             </div>
             <button class="zm-nav" id="zm-next" title="Próxima página (→)">&#8250;</button>
         </div>
+    </div>
+
+    <!-- ── Lasso Confirm Bar ── -->
+    <div id="zm-lasso-confirm-bar">
+        <span class="zm-lbl" id="zm-lasso-pt-count"></span>
+        <button class="zm-lb ok"  id="zm-lasso-apply-btn">✓ Aplicar</button>
+        <button class="zm-lb cxl" id="zm-lasso-cancel-btn">✕ Cancelar</button>
     </div>
 
     <!-- ── Crop Quick Config Panel ── -->
@@ -3319,6 +3354,16 @@ function applyEraseToCanvas(ctx, tab, n, w, h) {
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
     for (const session of tab.eraseStrokes[n]) {
+        if (session.type === 'lasso') {
+            if (!session.pts?.length) continue;
+            ctx.fillStyle = session.color ?? '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(session.pts[0].x * w, session.pts[0].y * h);
+            for (let i = 1; i < session.pts.length; i++) ctx.lineTo(session.pts[i].x * w, session.pts[i].y * h);
+            ctx.closePath();
+            ctx.fill();
+            continue;
+        }
         const pts = session.pts ?? session;
         if (!pts.length) continue;
         ctx.fillStyle = session.color ?? '#ffffff';
@@ -4250,6 +4295,9 @@ const zmEraserUndo       = document.getElementById('zm-eraser-undo');
 const zmEraserColorWrap  = document.getElementById('zm-eraser-color-wrap');
 const zmEraserColorBtn   = document.getElementById('zm-eraser-color-btn');
 const zmEraserColorInput = document.getElementById('zm-eraser-color-input');
+const zmEraserLasso      = document.getElementById('zm-eraser-lasso');
+let zmLassoPoints   = [];
+let zmLassoComplete = false;
 const zmInsertBtn   = document.getElementById('zm-insert-btn');
 const zmInsertUndo  = document.getElementById('zm-insert-undo');
 
@@ -4304,11 +4352,12 @@ zoomScroll.addEventListener('wheel', e => {
 
 document.addEventListener('keydown', e => {
     if (!zoomModal.classList.contains('open')) return;
-    const inErase = zoomModal.classList.contains('erase-mode') || zoomModal.classList.contains('erase-rect-mode');
+    const inErase = zoomModal.classList.contains('erase-mode') || zoomModal.classList.contains('erase-rect-mode') || zoomModal.classList.contains('erase-lasso-mode');
     if (e.key === 'Escape') {
         if (cqpIsOpen()) { cqpClose(false); return; }
         if (zoomModal.classList.contains('crop-mode')) { exitCropMode(); return; }
         if (zoomModal.classList.contains('insert-mode')) { exitInsertMode(); return; }
+        if (zoomModal.classList.contains('erase-lasso-mode')) { cancelZmLasso(); return; }
         if (inErase) { exitAllEraseModes(); return; }
         closeZoom(); return;
     }
@@ -4317,6 +4366,7 @@ document.addEventListener('keydown', e => {
     if (inErase) {
         if (e.key === 'e' || e.key === 'E') toggleEraseMode();
         if (e.key === 'r' || e.key === 'R') { if (zoomModal.classList.contains('erase-rect-mode')) exitEraseRectMode(); else enterEraseRectMode(); }
+        if (e.key === 'l' || e.key === 'L') { if (zoomModal.classList.contains('erase-lasso-mode')) exitEraseLassoMode(); else enterEraseLassoMode(); }
         return;
     }
     if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   zmNavPage(-1);
@@ -4328,6 +4378,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'v' || e.key === 'V') toggleCropMode(true);
     if (e.key === 'e' || e.key === 'E') toggleEraseMode();
     if (e.key === 'r' || e.key === 'R') enterEraseRectMode();
+    if (e.key === 'l' || e.key === 'L') { if (zoomModal.classList.contains('erase-lasso-mode')) exitEraseLassoMode(); else enterEraseLassoMode(); }
     if ((e.key === 'i' || e.key === 'I') && lastCrop) { if (zoomModal.classList.contains('insert-mode')) exitInsertMode(); else enterInsertMode(); }
 });
 
@@ -4548,26 +4599,41 @@ cropCanvas.addEventListener('mousedown', e => {
 });
 
 // ── Eraser Mode ──
-function redrawEraseCanvas() {
+function redrawEraseCanvas(lassoPrevX, lassoPrevY) {
     const tab = zm.tab;
     const n   = zm.page;
     const ctx = eraseCanvas.getContext('2d');
     ctx.clearRect(0, 0, eraseCanvas.width, eraseCanvas.height);
-    if (!tab?.eraseStrokes?.[n]?.length) return;
-    const w = eraseCanvas.width, h = eraseCanvas.height;
-    const maxDim = Math.max(w, h);
-    for (const session of tab.eraseStrokes[n]) {
-        const pts = session.pts ?? session;
-        ctx.fillStyle = session.color ?? '#ffffff';
-        for (const pt of pts) {
-            if (pt.type === 'rect') {
-                ctx.fillRect(pt.x * w, pt.y * h, pt.w * w, pt.h * h);
-            } else {
+    if (tab?.eraseStrokes?.[n]?.length) {
+        const w = eraseCanvas.width, h = eraseCanvas.height;
+        const maxDim = Math.max(w, h);
+        for (const session of tab.eraseStrokes[n]) {
+            if (session.type === 'lasso') {
+                if (!session.pts?.length) continue;
+                ctx.fillStyle = session.color ?? '#ffffff';
                 ctx.beginPath();
-                ctx.arc(pt.x * w, pt.y * h, pt.r * maxDim, 0, Math.PI * 2);
+                ctx.moveTo(session.pts[0].x * w, session.pts[0].y * h);
+                for (let i = 1; i < session.pts.length; i++) ctx.lineTo(session.pts[i].x * w, session.pts[i].y * h);
+                ctx.closePath();
                 ctx.fill();
+                continue;
+            }
+            const pts = session.pts ?? session;
+            ctx.fillStyle = session.color ?? '#ffffff';
+            for (const pt of pts) {
+                if (pt.type === 'rect') {
+                    ctx.fillRect(pt.x * w, pt.y * h, pt.w * w, pt.h * h);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(pt.x * w, pt.y * h, pt.r * maxDim, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
         }
+    }
+    // Desenha o overlay do laço em progresso por cima
+    if (zoomModal.classList.contains('erase-lasso-mode') && zmLassoPoints.length > 0) {
+        _drawZmLassoPreview(lassoPrevX, lassoPrevY);
     }
 }
 
@@ -4702,12 +4768,14 @@ zmInsertUndo.addEventListener('click', function() {
 
 function _syncEraseControls() {
     try {
-        const isBrush   = zoomModal.classList.contains('erase-mode');
-        const isRect    = zoomModal.classList.contains('erase-rect-mode');
-        const any       = isBrush || isRect;
+        const isBrush  = zoomModal.classList.contains('erase-mode');
+        const isRect   = zoomModal.classList.contains('erase-rect-mode');
+        const isLasso  = zoomModal.classList.contains('erase-lasso-mode');
+        const any      = isBrush || isRect || isLasso;
         const hasStrokes = !!(zm.tab?.eraseStrokes?.[zm.page]?.length);
-        if (zmEraser)     zmEraser.classList.toggle('active', isBrush);
-        if (zmEraserRect) zmEraserRect.classList.toggle('active', isRect);
+        if (zmEraser)      zmEraser.classList.toggle('active', isBrush);
+        if (zmEraserRect)  zmEraserRect.classList.toggle('active', isRect);
+        if (zmEraserLasso) zmEraserLasso.classList.toggle('active', isLasso);
         if (zmEraserSm)        zmEraserSm.style.display   = isBrush ? '' : 'none';
         if (zmEraserLg)        zmEraserLg.style.display   = isBrush ? '' : 'none';
         if (zmEraserSz)        zmEraserSz.style.display   = isBrush ? '' : 'none';
@@ -4721,8 +4789,121 @@ function exitAllEraseModes() {
     try { zoomModal.classList.remove('erase-mode'); } catch (_) {}
     try { zoomModal.classList.remove('erase-rect-mode'); } catch (_) {}
     try { zoomModal.classList.remove('insert-mode'); zmInsertBtn?.classList.remove('active'); } catch (_) {}
+    try { _exitEraseLassoModeClean(); } catch (_) {}
     _syncEraseControls();
 }
+
+// ── Lasso erase ──────────────────────────────────────────────────────────────
+function _drawZmLassoPreview(prevX, prevY) {
+    const ctx = eraseCanvas.getContext('2d');
+    const w   = eraseCanvas.width;
+    const h   = eraseCanvas.height;
+    ctx.save();
+    if (zmLassoComplete) {
+        // Preenchimento semi-transparente mostrando a área que será apagada
+        ctx.fillStyle = eraserColor + '66';
+        ctx.beginPath();
+        ctx.moveTo(zmLassoPoints[0].x * w, zmLassoPoints[0].y * h);
+        for (let i = 1; i < zmLassoPoints.length; i++) ctx.lineTo(zmLassoPoints[i].x * w, zmLassoPoints[i].y * h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#8b5cf6';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 3]);
+        ctx.stroke();
+    } else {
+        // Linha pontilhada + preview até o cursor
+        ctx.strokeStyle = '#8b5cf6';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 3]);
+        ctx.beginPath();
+        ctx.moveTo(zmLassoPoints[0].x * w, zmLassoPoints[0].y * h);
+        for (let i = 1; i < zmLassoPoints.length; i++) ctx.lineTo(zmLassoPoints[i].x * w, zmLassoPoints[i].y * h);
+        if (prevX != null) ctx.lineTo(prevX, prevY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Pontos
+        ctx.fillStyle = '#8b5cf6';
+        for (const pt of zmLassoPoints) {
+            ctx.beginPath();
+            ctx.arc(pt.x * w, pt.y * h, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // Círculo verde no primeiro ponto (fechar ao aproximar)
+        if (zmLassoPoints.length >= 3) {
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(zmLassoPoints[0].x * w, zmLassoPoints[0].y * h, 7, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+    ctx.restore();
+}
+
+function enterEraseLassoMode() {
+    exitCropMode();
+    eraser.painting = false;
+    zoomModal.classList.remove('erase-mode', 'erase-rect-mode');
+    zoomModal.classList.add('erase-lasso-mode');
+    zmLassoPoints = []; zmLassoComplete = false;
+    redrawEraseCanvas();
+    _syncEraseControls();
+}
+
+function _exitEraseLassoModeClean() {
+    zmLassoPoints = []; zmLassoComplete = false;
+    zoomModal.classList.remove('erase-lasso-mode');
+    const bar = document.getElementById('zm-lasso-confirm-bar');
+    if (bar) bar.classList.remove('visible');
+    redrawEraseCanvas();
+}
+
+function exitEraseLassoMode() {
+    _exitEraseLassoModeClean();
+    _syncEraseControls();
+}
+
+function _zmLassoShowBar() {
+    const bar = document.getElementById('zm-lasso-confirm-bar');
+    const lbl = document.getElementById('zm-lasso-pt-count');
+    if (lbl) lbl.textContent = `${zmLassoPoints.length} pontos`;
+    if (bar) bar.classList.add('visible');
+}
+
+function closeZmLasso() {
+    zmLassoComplete = true;
+    redrawEraseCanvas();
+    _zmLassoShowBar();
+}
+
+function cancelZmLasso() {
+    _exitEraseLassoModeClean();
+    _syncEraseControls();
+}
+
+function applyZmLasso() {
+    if (!zmLassoComplete || zmLassoPoints.length < 3) return;
+    const tab = zm.tab;
+    const n   = zm.page;
+    if (!tab) return;
+    if (!tab.eraseStrokes)    tab.eraseStrokes    = {};
+    if (!tab.eraseStrokes[n]) tab.eraseStrokes[n] = [];
+    // Normaliza pontos para o tamanho actual do eraseCanvas
+    const w = eraseCanvas.width, h = eraseCanvas.height;
+    tab.eraseStrokes[n].push({ type: 'lasso', color: eraserColor, pts: zmLassoPoints.slice() });
+    zmLassoPoints = []; zmLassoComplete = false;
+    zoomModal.classList.remove('erase-lasso-mode');
+    const bar = document.getElementById('zm-lasso-confirm-bar');
+    if (bar) bar.classList.remove('visible');
+    redrawEraseCanvas();
+    _syncEraseControls();
+    toast('✦ Área do laço apagada!');
+}
+
+document.getElementById('zm-lasso-apply-btn')?.addEventListener('click', applyZmLasso);
+document.getElementById('zm-lasso-cancel-btn')?.addEventListener('click', cancelZmLasso);
+// ─────────────────────────────────────────────────────────────────────────────
 
 function enterEraseMode() {
     exitCropMode();
@@ -4788,6 +4969,10 @@ zmEraserRect.addEventListener('click', () => {
     if (zoomModal.classList.contains('erase-rect-mode')) exitEraseRectMode();
     else enterEraseRectMode();
 });
+zmEraserLasso?.addEventListener('click', () => {
+    if (zoomModal.classList.contains('erase-lasso-mode')) exitEraseLassoMode();
+    else enterEraseLassoMode();
+});
 zmEraserUndo.addEventListener('click', undoErase);
 zmEraserSm.addEventListener('click', () => {
     if (eraserSzIdx > 0) { eraserSzIdx--; zmEraserSz.textContent = ERASE_LABELS[eraserSzIdx]; updateEraseCursorSize(); }
@@ -4807,6 +4992,41 @@ eraseCanvas.addEventListener('wheel', e => {
 
 eraseCanvas.addEventListener('mouseenter', () => {
     if (zoomModal.classList.contains('erase-mode')) applyEraseCursor();
+});
+
+// ── Laço: click para adicionar pontos, dblclick para fechar ──
+eraseCanvas.addEventListener('click', e => {
+    if (!zoomModal.classList.contains('erase-lasso-mode') || zmLassoComplete) return;
+    const r  = eraseCanvas.getBoundingClientRect();
+    const px = (e.clientX - r.left) / eraseCanvas.width;
+    const py = (e.clientY - r.top)  / eraseCanvas.height;
+
+    // Fechar polígono se clicar perto do primeiro ponto (3+ pontos)
+    if (zmLassoPoints.length >= 3) {
+        const w   = eraseCanvas.width, h = eraseCanvas.height;
+        const dx  = (px - zmLassoPoints[0].x) * w;
+        const dy  = (py - zmLassoPoints[0].y) * h;
+        if (Math.hypot(dx, dy) <= 12) { closeZmLasso(); return; }
+    }
+
+    zmLassoPoints.push({ x: px, y: py });
+    redrawEraseCanvas();
+});
+
+eraseCanvas.addEventListener('dblclick', e => {
+    if (!zoomModal.classList.contains('erase-lasso-mode') || zmLassoComplete) return;
+    if (zmLassoPoints.length >= 3) {
+        zmLassoPoints.pop(); // remove ponto extra do segundo click do dblclick
+        closeZmLasso();
+    }
+});
+
+eraseCanvas.addEventListener('mousemove', e => {
+    if (!zoomModal.classList.contains('erase-lasso-mode') || zmLassoComplete || zmLassoPoints.length === 0) return;
+    const r  = eraseCanvas.getBoundingClientRect();
+    const px = e.clientX - r.left;
+    const py = e.clientY - r.top;
+    redrawEraseCanvas(px, py);
 });
 
 
@@ -5509,6 +5729,9 @@ function fmtBytes(b) {
         <button class="idz-tool-btn" data-tool="crop" title="Recortar (C)">
           <svg viewBox="0 0 24 24"><polyline points="6 3 6 18 21 18"/><polyline points="3 6 18 6 18 21"/></svg>
         </button>
+        <button class="idz-tool-btn" data-tool="lasso" title="Laço Poligonal (L)">
+          <svg viewBox="0 0 24 24"><path d="M3 18l5-14 13 5-5 13z"/><circle cx="3" cy="18" r="1.8" fill="currentColor" stroke="none"/><circle cx="8" cy="4" r="1.8" fill="currentColor" stroke="none"/><circle cx="21" cy="9" r="1.8" fill="currentColor" stroke="none"/><circle cx="16" cy="22" r="1.8" fill="currentColor" stroke="none"/></svg>
+        </button>
         <button class="idz-tool-btn" data-tool="eraser" title="Borracha (E)">
           <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16l10-10 7 7-3 3"/><path d="M6.0 11.0 l7 7"/></svg>
         </button>
@@ -5526,8 +5749,9 @@ function fmtBytes(b) {
           <svg viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M21 8A10 10 0 1 1 12 2"/></svg>
         </button>
         <div class="idz-tb-sep"></div>
-        <button class="idz-tool-btn" id="idz-undo-btn" title="Desfazer (Ctrl+Z)">
-          <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5"/></svg>
+        <button class="idz-tool-btn" id="idz-undo-btn" title="Desfazer (Ctrl+Z)" style="gap:0.3rem;width:auto;padding:0 0.5rem;font-size:0.7rem;font-weight:600;">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;flex-shrink:0"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5"/></svg>
+          <span id="idz-undo-label">Desfazer</span>
         </button>
         <button class="idz-tool-btn" id="idz-reset-btn" title="Resetar imagem original">
           <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -5605,6 +5829,11 @@ function fmtBytes(b) {
     let brushSize     = 20;
     let drawColor     = '#ff4444';
     let pendingUrl    = null;
+    // laço poligonal
+    let lassoPoints    = [];
+    let lassoComplete  = false;
+    let lassoFillColor = '#ffffff';
+    let eyedropperActive = false;
 
     // ── abrir / fechar ────────────────────────────────────────────────────────
     openBtn.addEventListener('click', () => { overlay.classList.add('open'); loadFolders(); });
@@ -5702,13 +5931,33 @@ function fmtBytes(b) {
     function pushHistory() {
         history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
         if (history.length > 30) history.shift();
+        updateUndoBtn();
+    }
+
+    function updateUndoBtn() {
+        const btn = document.getElementById('idz-undo-btn');
+        const lbl = document.getElementById('idz-undo-label');
+        if (!btn) return;
+        const canUndo = history.length > 1;
+        btn.style.opacity  = canUndo ? '1' : '0.3';
+        btn.style.color    = canUndo ? '#fb923c' : '';
+        btn.style.borderColor = canUndo ? 'rgba(251,146,60,0.5)' : '';
+        if (lbl) lbl.textContent = canUndo ? `Desfazer (${history.length - 1})` : 'Desfazer';
     }
 
     document.getElementById('idz-undo-btn').addEventListener('click', undo);
     function undo() {
         if (history.length <= 1) return;
         history.pop();
-        ctx.putImageData(history[history.length - 1], 0, 0);
+        const prev = history[history.length - 1];
+        // Redimensiona o canvas antes de restaurar (crop/rotate mudam as dimensões)
+        canvas.width  = prev.width;
+        canvas.height = prev.height;
+        ctx.putImageData(prev, 0, 0);
+        sizeLabel.textContent = `${canvas.width} × ${canvas.height} px`;
+        // Limpa estado de crop pendente
+        cropRect = null; cropStart = null;
+        updateUndoBtn();
     }
 
     document.getElementById('idz-reset-btn').addEventListener('click', () => {
@@ -5754,9 +6003,18 @@ function fmtBytes(b) {
     });
 
     function setTool(name) {
+        if (activeTool === 'crop' && name !== 'crop') {
+            cropRect = null; cropStart = null;
+            redrawCropOverlay();
+        }
+        if (activeTool === 'lasso' && name !== 'lasso') {
+            lassoPoints = []; lassoComplete = false; eyedropperActive = false;
+            const snap = history[history.length - 1];
+            if (snap) { canvas.width = snap.width; canvas.height = snap.height; ctx.putImageData(snap, 0, 0); }
+        }
         activeTool = name;
         document.querySelectorAll('.idz-tool-btn[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === name));
-        canvas.className = name === 'crop' || name === 'cursor' ? 'cur-crosshair' :
+        canvas.className = name === 'crop' || name === 'cursor' || name === 'lasso' ? 'cur-crosshair' :
                            name === 'eraser' ? 'cur-eraser' :
                            name === 'draw'   ? 'cur-draw'   : 'cur-default';
         renderSubtoolbar(name);
@@ -5770,7 +6028,7 @@ function fmtBytes(b) {
         }
         if (tool === 'crop') {
             subtoolbar.innerHTML = `
-                <span class="idz-sub-label">Arraste para selecionar a área de recorte</span>
+                <span class="idz-sub-label">Arraste para selecionar → <strong style="color:#94a3b8">duplo clique</strong> ou <kbd style="background:#1e293b;padding:1px 5px;border-radius:3px;font-size:0.65rem">Enter</kbd> para aplicar</span>
                 <button class="idz-sub-btn confirm" id="idz-crop-apply" disabled>✓ Aplicar recorte</button>
                 <button class="idz-sub-btn" id="idz-crop-cancel">Cancelar</button>`;
             document.getElementById('idz-crop-apply').addEventListener('click', applyCrop);
@@ -5786,6 +6044,60 @@ function fmtBytes(b) {
                 <span class="idz-sub-label" style="margin-left:0.4rem;color:#475569;font-size:0.67rem">Clique ou arraste sobre a imagem</span>`;
             document.getElementById('idz-brush-sz').addEventListener('input', e => { brushSize = +e.target.value; document.getElementById('idz-brush-val').textContent = brushSize + 'px'; });
             if (!isErase) document.getElementById('idz-draw-color').addEventListener('input', e => { drawColor = e.target.value; });
+        }
+        if (tool === 'lasso') {
+            if (!lassoComplete) {
+                const n = lassoPoints.length;
+                subtoolbar.innerHTML = `
+                    <span class="idz-sub-label">${n === 0
+                        ? 'Clique para adicionar pontos do polígono'
+                        : `${n} ponto${n !== 1 ? 's' : ''} — clique perto do início ou duplo clique para fechar`}</span>
+                    ${n >= 3 ? `<button class="idz-sub-btn confirm" id="lasso-close-btn">✓ Fechar polígono</button>` : ''}
+                    ${n > 0  ? `<button class="idz-sub-btn" id="lasso-undo-pt-btn">↩ Remover último</button>` : ''}
+                    ${n > 0  ? `<button class="idz-sub-btn" id="lasso-cancel-btn">✕ Cancelar</button>` : ''}`;
+                document.getElementById('lasso-close-btn')?.addEventListener('click', closeLasso);
+                document.getElementById('lasso-undo-pt-btn')?.addEventListener('click', () => {
+                    if (lassoPoints.length > 0) { lassoPoints.pop(); drawLassoOverlay(); renderSubtoolbar('lasso'); }
+                });
+                document.getElementById('lasso-cancel-btn')?.addEventListener('click', cancelLasso);
+            } else {
+                subtoolbar.innerHTML = `
+                    <button class="idz-sub-btn" id="lasso-erase-btn" style="border-color:rgba(239,68,68,0.45);color:#f87171">✕ Apagar área</button>
+                    <span class="idz-sub-label" style="margin-left:0.4rem">Preencher:</span>
+                    <button class="idz-sub-btn${eyedropperActive ? ' active' : ''}" id="lasso-eyedrop-btn" title="Ative e clique na imagem para coletar a cor do pixel">⊕ Coletar cor</button>
+                    <span id="lasso-color-swatch" style="width:20px;height:20px;border-radius:4px;background:${lassoFillColor};border:1.5px solid rgba(255,255,255,0.25);flex-shrink:0;cursor:pointer;display:inline-block;vertical-align:middle;" title="Clique para escolher cor manualmente"></span>
+                    <input type="color" id="lasso-fill-color-pick" value="${lassoFillColor}" style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;">
+                    <button class="idz-sub-btn confirm" id="lasso-fill-btn">■ Preencher área</button>
+                    <button class="idz-sub-btn" id="lasso-cancel-btn" style="margin-left:auto">✕ Cancelar</button>`;
+                document.getElementById('lasso-erase-btn').addEventListener('click', () => applyLasso('erase'));
+                document.getElementById('lasso-eyedrop-btn').addEventListener('click', () => {
+                    eyedropperActive = !eyedropperActive;
+                    if (eyedropperActive) {
+                        // Mostra imagem limpa para o usuário poder ver as cores sem o overlay
+                        const snap = history[history.length - 1];
+                        canvas.width = snap.width; canvas.height = snap.height;
+                        ctx.putImageData(snap, 0, 0);
+                        setStatus('Clique na imagem para coletar a cor', '');
+                    } else {
+                        drawLassoOverlay();
+                        setStatus('', '');
+                    }
+                    renderSubtoolbar('lasso');
+                });
+                document.getElementById('lasso-color-swatch').addEventListener('click', () => {
+                    document.getElementById('lasso-fill-color-pick').click();
+                });
+                document.getElementById('lasso-fill-color-pick').addEventListener('input', e => {
+                    lassoFillColor = e.target.value;
+                    const sw = document.getElementById('lasso-color-swatch');
+                    if (sw) sw.style.background = lassoFillColor;
+                });
+                document.getElementById('lasso-fill-btn').addEventListener('click', () => {
+                    eyedropperActive = false;
+                    applyLasso('fill');
+                });
+                document.getElementById('lasso-cancel-btn').addEventListener('click', cancelLasso);
+            }
         }
         if (tool === 'adjust') {
             subtoolbar.innerHTML = `
@@ -5851,12 +6163,19 @@ function fmtBytes(b) {
 
     // ── mouse events ──────────────────────────────────────────────────────────
     canvas.addEventListener('mousedown', e => {
-        if (activeTool === 'cursor') return;
-        isDrawing = true;
+        if (activeTool === 'cursor' || activeTool === 'lasso') return;
         const { x, y } = coords(e);
         if (activeTool === 'crop') {
+            // Clique DENTRO da seleção existente: preserva cropRect (para dblclick funcionar)
+            if (cropRect && x >= cropRect.x && x <= cropRect.x + cropRect.w &&
+                            y >= cropRect.y && y <= cropRect.y + cropRect.h) {
+                return; // não inicia novo drag, dblclick vai aplicar
+            }
+            isDrawing = true;
             cropStart = { x, y }; cropRect = null;
+            redrawCropOverlay(); // limpa overlay anterior
         } else {
+            isDrawing = true;
             pushHistory();
             lastX = x; lastY = y;
             if (activeTool === 'eraser') { ctx.globalCompositeOperation = 'destination-out'; }
@@ -5867,6 +6186,23 @@ function fmtBytes(b) {
     });
 
     canvas.addEventListener('mousemove', e => {
+        // Eyedropper: actualiza swatch com a cor do pixel sob o cursor
+        if (eyedropperActive) {
+            const { x, y } = coords(e);
+            const px = Math.round(Math.max(0, Math.min(canvas.width  - 1, x)));
+            const py = Math.round(Math.max(0, Math.min(canvas.height - 1, y)));
+            const d  = ctx.getImageData(px, py, 1, 1).data;
+            const hex = '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+            const sw = document.getElementById('lasso-color-swatch');
+            if (sw) sw.style.background = hex;
+            return;
+        }
+        // Preview do laço (cursor mostra linha pontilhada até o próximo ponto)
+        if (activeTool === 'lasso' && lassoPoints.length > 0 && !lassoComplete) {
+            const { x, y } = coords(e);
+            drawLassoOverlay(x, y);
+            return;
+        }
         if (!isDrawing) return;
         const { x, y } = coords(e);
         if (activeTool === 'crop') {
@@ -5888,24 +6224,200 @@ function fmtBytes(b) {
             pushHistory();
         }
     });
-    canvas.addEventListener('mouseleave', () => { if (isDrawing && activeTool !== 'crop') { isDrawing = false; ctx.globalCompositeOperation = 'source-over'; pushHistory(); } });
+
+    canvas.addEventListener('dblclick', e => {
+        if (activeTool === 'crop' && cropRect && cropRect.w >= 5 && cropRect.h >= 5) {
+            applyCrop();
+        }
+        if (activeTool === 'lasso' && !lassoComplete && lassoPoints.length >= 3) {
+            // Remove o ponto extra adicionado pelo segundo click do dblclick
+            lassoPoints.pop();
+            closeLasso();
+        }
+    });
+    canvas.addEventListener('mouseleave', () => {
+        if (!isDrawing) return;
+        isDrawing = false;
+        if (activeTool === 'crop') {
+            // Mantém a seleção visível se o usuário saiu arrastando — apenas para o drag
+        } else {
+            ctx.globalCompositeOperation = 'source-over';
+            pushHistory();
+        }
+    });
+
+    // ── laço poligonal — clique por ponto ────────────────────────────────────
+    canvas.addEventListener('click', e => {
+        // Eyedropper: captura a cor do pixel clicado e desactiva o modo
+        if (eyedropperActive) {
+            const { x, y } = coords(e);
+            const px = Math.round(Math.max(0, Math.min(canvas.width  - 1, x)));
+            const py = Math.round(Math.max(0, Math.min(canvas.height - 1, y)));
+            const d  = ctx.getImageData(px, py, 1, 1).data;
+            lassoFillColor = '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+            eyedropperActive = false;
+            drawLassoOverlay(); // restaura o overlay do laço
+            renderSubtoolbar('lasso'); // atualiza o swatch e desativa o botão
+            setStatus('Cor coletada. Clique em Preencher área para aplicar.', 'ok');
+            return;
+        }
+        if (activeTool !== 'lasso' || lassoComplete) return;
+        const { x, y } = coords(e);
+
+        // Se tem 3+ pontos e clicou perto do primeiro → fecha o polígono
+        if (lassoPoints.length >= 3) {
+            const dispW = canvas.getBoundingClientRect().width || canvas.width;
+            const scale = canvas.width / dispW;
+            const dist  = Math.hypot(x - lassoPoints[0].x, y - lassoPoints[0].y);
+            if (dist <= 15 * scale) { closeLasso(); return; }
+        }
+
+        lassoPoints.push({ x, y });
+        drawLassoOverlay(x, y);
+        renderSubtoolbar('lasso'); // atualiza contador de pontos
+    });
 
     // ── crop overlay ──────────────────────────────────────────────────────────
     function redrawCropOverlay() {
-        // Usa CSS outline em vez de overlay canvas — mais simples
-        if (!cropRect || cropRect.w < 2 || cropRect.h < 2) { canvas.style.outline = 'none'; return; }
-        // Desenha sobre o canvas temporariamente para mostrar seleção
+        // Sempre restaura a imagem limpa primeiro
         const snap = history[history.length - 1];
+        canvas.width  = snap.width;
+        canvas.height = snap.height;
         ctx.putImageData(snap, 0, 0);
+        if (!cropRect || cropRect.w < 2 || cropRect.h < 2) return;
+
+        const { x, y, w, h } = cropRect;
+        const cw = canvas.width, ch = canvas.height;
+        // Escala para compensar canvas grande exibido pequeno via CSS
+        const dispW = canvas.getBoundingClientRect().width || cw;
+        const scale = cw / dispW;
+
         ctx.save();
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.clearRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
-        ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
-        ctx.strokeRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+        ctx.fillStyle = 'rgba(0,0,0,0.52)';
+        // Quatro retângulos ao redor da seleção — a seleção fica com a imagem original visível
+        ctx.fillRect(0, 0, cw, y);                // topo
+        ctx.fillRect(0, y + h, cw, ch - y - h);   // baixo
+        ctx.fillRect(0, y, x, h);                  // esquerda
+        ctx.fillRect(x + w, y, cw - x - w, h);    // direita
+        // Borda da seleção
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth   = Math.max(1, 2 * scale);
+        ctx.setLineDash([Math.round(6 * scale), Math.round(4 * scale)]);
+        ctx.strokeRect(x, y, w, h);
         ctx.setLineDash([]);
         ctx.restore();
     }
+
+    // ── laço — funções ────────────────────────────────────────────────────────
+    function drawLassoOverlay(mouseX, mouseY) {
+        const snap = history[history.length - 1];
+        canvas.width  = snap.width;
+        canvas.height = snap.height;
+        ctx.putImageData(snap, 0, 0);
+        if (lassoPoints.length === 0) return;
+
+        const dispW = canvas.getBoundingClientRect().width || canvas.width;
+        const scale = canvas.width / dispW;
+        const lw    = Math.max(1, 2 * scale);
+        const dotR  = Math.max(2, 4 * scale);
+
+        ctx.save();
+
+        if (lassoComplete) {
+            // Escurece fora do polígono
+            ctx.fillStyle = 'rgba(0,0,0,0.52)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Re-desenha imagem original DENTRO do polígono via clip
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+            lassoPoints.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.closePath();
+            ctx.clip();
+            const tmp = document.createElement('canvas');
+            tmp.width = snap.width; tmp.height = snap.height;
+            tmp.getContext('2d').putImageData(snap, 0, 0);
+            ctx.drawImage(tmp, 0, 0);
+            ctx.restore();
+            // Borda da seleção
+            ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = lw;
+            ctx.setLineDash([6 * scale, 4 * scale]);
+            ctx.beginPath();
+            ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+            lassoPoints.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+        } else {
+            // Linhas conectando pontos clicados
+            ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = lw;
+            ctx.setLineDash([5 * scale, 3 * scale]);
+            ctx.beginPath();
+            ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+            for (let i = 1; i < lassoPoints.length; i++) ctx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+            // Linha de preview até o cursor
+            if (mouseX !== undefined) ctx.lineTo(mouseX, mouseY);
+            ctx.stroke(); ctx.setLineDash([]);
+
+            // Pontos clicados
+            lassoPoints.forEach((p, i) => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, dotR, 0, Math.PI * 2);
+                ctx.fillStyle = i === 0 ? '#f59e0b' : '#06b6d4';
+                ctx.fill();
+            });
+
+            // Anel de snap no primeiro ponto quando cursor está perto
+            if (mouseX !== undefined && lassoPoints.length >= 3) {
+                const dist = Math.hypot(mouseX - lassoPoints[0].x, mouseY - lassoPoints[0].y);
+                if (dist <= 15 * scale) {
+                    ctx.beginPath();
+                    ctx.arc(lassoPoints[0].x, lassoPoints[0].y, dotR * 2.2, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = lw; ctx.stroke();
+                }
+            }
+        }
+        ctx.restore();
+    }
+
+    function closeLasso() {
+        if (lassoPoints.length < 3) return;
+        lassoComplete = true;
+        drawLassoOverlay();
+        renderSubtoolbar('lasso');
+    }
+
+    function cancelLasso() {
+        lassoPoints = []; lassoComplete = false; eyedropperActive = false;
+        const snap = history[history.length - 1];
+        if (snap) { canvas.width = snap.width; canvas.height = snap.height; ctx.putImageData(snap, 0, 0); }
+        renderSubtoolbar('lasso');
+    }
+
+    function applyLasso(action) {
+        if (!lassoComplete || lassoPoints.length < 3) return;
+        const snap = history[history.length - 1];
+        canvas.width = snap.width; canvas.height = snap.height;
+        ctx.putImageData(snap, 0, 0); // restaura imagem limpa
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+        lassoPoints.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.clip();
+        if (action === 'erase') {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = lassoFillColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        ctx.restore();
+
+        pushHistory();
+        lassoPoints = []; lassoComplete = false;
+        setTool('cursor');
+        setStatus(action === 'erase' ? 'Área apagada. Ctrl+Z para desfazer.' : 'Área preenchida. Ctrl+Z para desfazer.', 'ok');
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     function applyCrop() {
         if (!cropRect || cropRect.w < 5 || cropRect.h < 5) return;
@@ -5919,18 +6431,24 @@ function fmtBytes(b) {
         ctx.putImageData(imageData, 0, 0);
         sizeLabel.textContent = `${canvas.width} × ${canvas.height} px`;
         cropRect = null; cropStart = null;
-        history = []; pushHistory();
+        pushHistory(); // mantém histórico anterior — permite desfazer o recorte
         setTool('cursor');
-        setStatus(`Recortado: ${canvas.width} × ${canvas.height} px`, 'ok');
+        setStatus(`Recortado: ${canvas.width} × ${canvas.height} px — Ctrl+Z para desfazer`, 'ok');
     }
 
     // ── teclado ───────────────────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
         if (!overlay.classList.contains('open')) return;
         if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); return; }
+        if (e.key === 'Enter') {
+            if (activeTool === 'crop' && cropRect && cropRect.w >= 5 && cropRect.h >= 5) {
+                e.preventDefault(); applyCrop();
+            }
+            return;
+        }
         if (e.key === 'Escape') { if (activeTool !== 'cursor') { setTool('cursor'); } else { closeModal(); } return; }
-        const map = { c: 'crop', e: 'eraser', d: 'draw', a: 'adjust' };
-        if (!e.ctrlKey && map[e.key]) setTool(map[e.key]);
+        const map = { c: 'crop', l: 'lasso', e: 'eraser', d: 'draw', a: 'adjust' };
+        if (!e.ctrlKey && map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
     });
 
     // ── paste ─────────────────────────────────────────────────────────────────
@@ -5945,13 +6463,31 @@ function fmtBytes(b) {
     function setStatus(msg, cls = '') { statusEl.textContent = msg; statusEl.className = 'idz-status' + (cls ? ' ' + cls : ''); }
     function setBtns(on) { saveBtn.disabled = !on; nextBtn.disabled = !on; }
 
+    // Aplica ajustes pendentes no canvas sem atualizar a UI (chamado antes de salvar)
+    function bakeAdjustSilent() {
+        if (adjBrightness === 100 && adjContrast === 100 && adjSaturation === 100) {
+            canvas.style.filter = 'none';
+            return;
+        }
+        const tmp = document.createElement('canvas');
+        tmp.width = canvas.width; tmp.height = canvas.height;
+        const tc = tmp.getContext('2d');
+        tc.filter = `brightness(${adjBrightness}%) contrast(${adjContrast}%) saturate(${adjSaturation}%)`;
+        tc.drawImage(canvas, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(tmp, 0, 0);
+        canvas.style.filter = 'none';
+        adjBrightness = 100; adjContrast = 100; adjSaturation = 100;
+    }
+
     async function doSave(keepOpen) {
         const folder = folderSel.value;
         const name   = nameInput.value.trim();
         if (!folder) return setStatus('Selecione uma pasta.', 'err');
         if (!name)   return setStatus('Digite um nome.', 'err');
 
-        canvas.style.filter = 'none';
+        // Aplica ajustes CSS pendentes no canvas antes de salvar
+        bakeAdjustSilent();
         setStatus('Salvando...'); setBtns(false);
 
         try {
