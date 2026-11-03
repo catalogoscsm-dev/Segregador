@@ -943,6 +943,14 @@
             flex: 0 0 auto; padding: 0.45rem 0.8rem;
         }
         .idz-btn.secondary:hover { background: rgba(255,255,255,0.09); }
+        .idz-btn.gemini {
+            background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+            color: white; box-shadow: 0 4px 18px rgba(109,40,217,0.3);
+            display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+        }
+        .idz-btn.gemini:hover { box-shadow: 0 6px 26px rgba(139,92,246,0.55); transform: translateY(-1px); }
+        .idz-btn.gemini:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+        .idz-btn.gemini.loading { opacity: 0.7; cursor: wait; }
         .idz-status { font-size: 0.73rem; text-align: center; color: var(--text-3); min-height: 1em; }
         .idz-status.ok  { color: #4ade80; }
         .idz-status.err { color: #f87171; }
@@ -5787,6 +5795,10 @@ function fmtBytes(b) {
         </div>
         <div class="idz-actions">
           <button class="idz-btn secondary" id="idz-new-btn">← Nova imagem</button>
+          <button class="idz-btn gemini" id="idz-gemini-btn" disabled title="Melhorar qualidade com Gemini AI">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/></svg>
+            Melhorar com Gemini
+          </button>
           <button class="idz-btn primary" id="idz-save-btn" disabled>Salvar</button>
           <button class="idz-btn primary" id="idz-next-btn" disabled>Salvar e próxima ›</button>
         </div>
@@ -5808,9 +5820,10 @@ function fmtBytes(b) {
     const ctx       = canvas.getContext('2d');
     const folderSel = document.getElementById('idz-folder-sel');
     const nameInput = document.getElementById('idz-name');
-    const saveBtn   = document.getElementById('idz-save-btn');
-    const nextBtn   = document.getElementById('idz-next-btn');
-    const newBtn    = document.getElementById('idz-new-btn');
+    const saveBtn    = document.getElementById('idz-save-btn');
+    const nextBtn    = document.getElementById('idz-next-btn');
+    const newBtn     = document.getElementById('idz-new-btn');
+    const geminiBtn  = document.getElementById('idz-gemini-btn');
     const statusEl  = document.getElementById('idz-status');
     const subtoolbar = document.getElementById('idz-subtoolbar');
     const sizeLabel = document.getElementById('idz-size-label');
@@ -5844,7 +5857,7 @@ function fmtBytes(b) {
     newBtn.addEventListener('click', () => {
         editor.style.display = 'none';
         dropArea.style.display = '';
-        saveBtn.disabled = true; nextBtn.disabled = true;
+        saveBtn.disabled = true; nextBtn.disabled = true; geminiBtn.disabled = true;
         setStatus('');
         history = []; baseImageData = null;
     });
@@ -5920,7 +5933,7 @@ function fmtBytes(b) {
     function showEditor() {
         dropArea.style.display = 'none';
         editor.style.display   = 'flex';
-        saveBtn.disabled = false; nextBtn.disabled = false;
+        saveBtn.disabled = false; nextBtn.disabled = false; geminiBtn.disabled = false;
         sizeLabel.textContent  = `${canvas.width} × ${canvas.height} px`;
         setTool('cursor');
         resetAdjust();
@@ -6461,7 +6474,47 @@ function fmtBytes(b) {
 
     // ── salvar ────────────────────────────────────────────────────────────────
     function setStatus(msg, cls = '') { statusEl.textContent = msg; statusEl.className = 'idz-status' + (cls ? ' ' + cls : ''); }
-    function setBtns(on) { saveBtn.disabled = !on; nextBtn.disabled = !on; }
+    function setBtns(on) { saveBtn.disabled = !on; nextBtn.disabled = !on; geminiBtn.disabled = !on; }
+
+    // ── Melhorar com Gemini ───────────────────────────────────────────────────
+    geminiBtn.addEventListener('click', async () => {
+        geminiBtn.disabled = true;
+        geminiBtn.classList.add('loading');
+        geminiBtn.textContent = '✦ Melhorando…';
+        setStatus('Enviando para Gemini AI…');
+        try {
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+            const resp = await fetch(`${API_BASE}/api/gemini-enhance`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'image/png' },
+                body: blob
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
+                throw new Error(err.error || `Erro ${resp.status}`);
+            }
+            const imgBlob = await resp.blob();
+            const imgUrl  = URL.createObjectURL(imgBlob);
+            const img     = new Image();
+            img.onload = () => {
+                canvas.width  = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                ctx.drawImage(img, 0, 0);
+                pushHistory();
+                sizeLabel.textContent = `${canvas.width} × ${canvas.height} px`;
+                setStatus('Imagem melhorada com Gemini!', 'ok');
+                geminiBtn.disabled = false;
+                geminiBtn.classList.remove('loading');
+                geminiBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/></svg> Melhorar com Gemini';
+            };
+            img.src = imgUrl;
+        } catch (e) {
+            setStatus(`Erro Gemini: ${e.message}`, 'err');
+            geminiBtn.disabled = false;
+            geminiBtn.classList.remove('loading');
+            geminiBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/></svg> Melhorar com Gemini';
+        }
+    });
 
     // Aplica ajustes pendentes no canvas sem atualizar a UI (chamado antes de salvar)
     function bakeAdjustSilent() {

@@ -34,15 +34,16 @@ function loadConfig() {
 
 function saveConfig() {
     try {
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify({ rootFolder: ROOT_FOLDER, enhance: ENHANCE }, null, 2), 'utf8');
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify({ rootFolder: ROOT_FOLDER, enhance: ENHANCE, geminiApiKey: GEMINI_KEY }, null, 2), 'utf8');
     } catch (e) {
         console.warn('[config] Não foi possível salvar config.json:', e.message);
     }
 }
 
-const _cfg    = loadConfig();
-let ROOT_FOLDER = _cfg.rootFolder || DEFAULT_ROOT;
-let ENHANCE     = !!_cfg.enhance;
+const _cfg       = loadConfig();
+let ROOT_FOLDER  = _cfg.rootFolder  || DEFAULT_ROOT;
+let ENHANCE      = !!_cfg.enhance;
+let GEMINI_KEY   = _cfg.geminiApiKey || '';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MIME = {
@@ -343,6 +344,66 @@ const server = http.createServer((req, res) => {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ ok: true, created, existed, errors }));
             } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
+    // ── POST /api/gemini-enhance ─────────────────────────────────────────────
+    if (pathname === '/api/gemini-enhance' && req.method === 'POST') {
+        if (!GEMINI_KEY) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'geminiApiKey não configurada em config.json.' }));
+            return;
+        }
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', async () => {
+            try {
+                const imgBuf  = Buffer.concat(chunks);
+                const b64img  = imgBuf.toString('base64');
+                const apiUrl  = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_KEY}`;
+                const payload = {
+                    contents: [{
+                        parts: [
+                            {
+                                text: 'Você é um especialista em fotografia de produto de alto padrão. Melhore esta imagem de produto: aumente a nitidez, melhore o contraste, corrija o balanço de branco, deixe o fundo mais branco e limpo, e realce os detalhes do produto. Mantenha as proporções e o enquadramento originais. Retorne apenas a imagem melhorada, sem texto adicional.'
+                            },
+                            {
+                                inline_data: { mime_type: 'image/png', data: b64img }
+                            }
+                        ]
+                    }],
+                    generationConfig: { responseModalities: ['image', 'text'] }
+                };
+                const apiRes = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const json = await apiRes.json();
+                if (!apiRes.ok) {
+                    console.error('[gemini] erro API:', JSON.stringify(json));
+                    res.writeHead(502, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: json.error?.message || 'Erro na API Gemini.' }));
+                    return;
+                }
+                // Extrai a imagem da resposta
+                const parts = json.candidates?.[0]?.content?.parts || [];
+                const imgPart = parts.find(p => p.inline_data?.mime_type?.startsWith('image/'));
+                if (!imgPart) {
+                    res.writeHead(502, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Gemini não retornou imagem.' }));
+                    return;
+                }
+                const outBuf = Buffer.from(imgPart.inline_data.data, 'base64');
+                console.log(`[gemini] imagem melhorada: ${Math.round(outBuf.length/1024)}KB`);
+                res.writeHead(200, { 'Content-Type': imgPart.inline_data.mime_type });
+                res.end(outBuf);
+            } catch (e) {
+                console.error('[gemini] erro interno:', e.message);
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: e.message }));
             }
